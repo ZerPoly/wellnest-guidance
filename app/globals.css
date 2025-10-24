@@ -1,26 +1,346 @@
 @import "tailwindcss";
 
+
+/* Metropolis Thin */
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-Thin.otf") format("opentype");
+  font-weight: 100;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-ThinItalic.otf") format("opentype");
+  font-weight: 100;
+  font-style: italic;
+}
+
+/* Metropolis ExtraLight */
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-ExtraLight.otf") format("opentype");
+  font-weight: 200;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-ExtraLightItalic.otf") format("opentype");
+  font-weight: 200;
+  font-style: italic;
+}
+
+/* Metropolis Light */
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-LightItalic.otf") format("opentype");
+  font-weight: 300;
+  font-style: italic;
+}
+
+/* Metropolis Regular */
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-RegularItalic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Metropolis Medium */
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-MediumItalic.otf") format("opentype");
+  font-weight: 500;
+  font-style: italic;
+}
+
+/* Metropolis SemiBold */
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-SemiBold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-SemiBoldItalic.otf") format("opentype");
+  font-weight: 600;
+  font-style: italic;
+}
+
+/* Metropolis Bold */
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-BoldItalic.otf") format("opentype");
+  font-weight: 700;
+  font-style: italic;
+}
+
+/* Metropolis ExtraBold */
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-ExtraBold.otf") format("opentype");
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-ExtraBoldItalic.otf") format("opentype");
+  font-weight: 800;
+  font-style: italic;
+}
+
+/* Metropolis Black */
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-Black.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Metropolis";
+  src: url("/fonts/Metropolis-BlackItalic.otf") format("opentype");
+  font-weight: 900;
+  font-style: italic;
+}
+
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* LIGHT MODE */
+  --bg-dark: hsl(220, 10%, 90%);
+  --bg: hsl(220, 21%, 95%);
+  --bg-light: hsl(220, 100%, 100%);
+
+  --text: hsl(220, 26%, 5%);
+  --text-muted: hsl(200, 6%, 29%);
+  --text-placeholder: hsl(200, 6%, 60%);
+
+
+  /* DARK MODE */
+  --bg-dark1: hsl(222, 22%, 1%);
+  --bg1: hsl(220, 10%, 8%);
+  --bg-light1: hsl(220, 7%, 12%);
+
+  --text1: hsl(220, 46%,96%);
+  --text-muted1: hsl(200, 6%, 70%);
+
+
+  /* BORDERS */
+  --border: hsl(220, 4%, 51%);
+
+
+  /* PRIMARY COLORS PURPLE */
+  --primary-darker: hsl(263, 83%, 10%);
+  --primary-dark: hsl(263, 83%, 25%);
+  --primary: hsl(263, 83%, 34%);
+  --primary-light: hsl(263, 83%, 60%);
+  --primary-lighter: hsl(263, 83%, 85%);
+
+  /* SECONDARY CYAN*/
+  --cyan-darker: hsl(180, 100%, 10%);
+  --cyan-dark: hsl(180, 100%, 30%);
+  --cyan: hsl(180, 100%, 40%);
+  --cyan-light: hsl(180, 100%, 70%);
+  --cyan-lighter: hsl(180, 100%, 90%);
+
+
+  /* ACCENT BLUE*/
+  --cyan: hsl(180, 100%, 40%);
+  --blue-darker: hsl(210, 100%, 10%);
+  --blue-dark: hsl(210, 100%, 30%);
+  --blue: hsl(210, 100%, 40%);
+  --blue-light: hsl(210, 100%, 70%);
+  --blue-lighter: hsl(210, 100%, 90%);
+
+  /* ACCENT ORANGE */
+  --orange-darker: hsl(23, 100%, 20%);
+  --orange-dark: hsl(23, 100%, 40%);
+  --orange: hsl(23, 100%, 60%);
+  --orange-light: hsl(23, 100%, 75%);
+  --orange-lighter: hsl(23, 100%, 90%);
+
+  /* TITLES */
+  --title: hsl(263, 83%, 34%);
+  /* FOOTER TEXT */
+  --footer-text: hsl(195, 5%, 84%);
+
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark{
+  /* DARK MODE */
+  --bg-dark: hsl(222, 22%, 1%);
+  --bg: hsl(220, 10%, 8%);
+  --bg-light: hsl(220, 7%, 12%);
+
+  --text: hsl(220, 46%,96%);
+  --text-muted: hsl(200, 6%, 70%);
+
+  /* TITLE */
+  --title: hsl(263, 83%, 60%); 
+  /* FOOTER TEXT */
+  /* --footer-text: hsl(200, 6%, 70%); */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply tracking-tighter;
+    
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html {
+  font-family: var(--font-metropolis);
+}
+
+html, main, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Metropolis", sans-serif;
+}
+
+button,
+[data-radix-ui-button] {
+  cursor: pointer !important;
+}
+
+
+/* Modal */
+
+/* Modal appear animation */
+@keyframes modal-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-appear {
+  animation: modal-appear 0.2s ease-out forwards;
+}
+
+/* Optional: Backdrop fade in animation */
+@keyframes backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.5;
+  }
+}
+
+/* Smooth scrollbar for modal content */
+.modal-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+
+/* Toast */
+
+/* Toast enter animation - slides in from right */
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Toast exit animation - slides out to right and fades */
+@keyframes toast-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.animate-toast-enter {
+  animation: toast-enter 0.3s ease-out forwards;
+}
+
+.animate-toast-exit {
+  animation: toast-exit 0.3s ease-in forwards;
+}
+
+/* Optional: Add a subtle bounce effect on enter */
+@keyframes toast-enter-bounce {
+  0% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-10px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Alternative bounce animation (uncomment to use) */
+/* .animate-toast-enter {
+  animation: toast-enter-bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+} */
+
+@keyframes modal-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-modal-appear {
+  animation: modal-appear 0.2s ease-out;
 }
