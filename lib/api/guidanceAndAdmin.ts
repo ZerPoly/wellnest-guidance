@@ -15,16 +15,16 @@ export interface AuthResponse {
   };
 }
 
-export async function adminLogin(email: string, password: string): Promise<AuthResponse> {
+export async function adminOrCounselorLogin(email: string, password: string): Promise<AuthResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/admin/login`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        admin_email: email,
-        admin_password: password,
+        email: email,
+        password: password,
       }),
     });
 

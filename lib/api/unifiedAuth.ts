@@ -1,4 +1,4 @@
-import { adminLogin, AuthResponse as AdminAuthResponse } from './adminAuth';
+import { adminOrCounselorLogin, AuthResponse as AdminAuthResponse } from './guidanceAndAdmin';
 import { guidanceLogin, AuthResponse as GuidanceAuthResponse } from './guidanceAuth';
 import { jwtDecode } from 'jwt-decode';
 
@@ -9,7 +9,6 @@ export interface AuthResponse {
   data?: {
     access_token: string;
     refresh_token: string;
-    role: 'admin' | 'counselor';
   };
 }
 
@@ -19,18 +18,16 @@ interface JWTPayload {
   [key: string]: any;
 }
 
-function extractRoleFromToken(token: string): 'admin' | 'counselor' | null {
+export function extractRoleFromToken(token: string): 'admin' | 'counselor' | 'super_admin' | null {
   try {
     const decoded = jwtDecode<JWTPayload>(token);
-    const role = decoded.role || decoded.user_type;
-    
-    if (role === 'admin' || role === 'administrator') {
-      return 'admin';
-    }
-    if (role === 'counselor' || role === 'guidance') {
-      return 'counselor';
-    }
-    
+    const role = (decoded.role || decoded.user_type || decoded.user_role || decoded.userType || '').toString().toLowerCase();
+
+    if (!role) return null;
+
+    if (role.includes('admin')) return 'admin';
+    if (role.includes('counselor') || role.includes('guidance')) return 'counselor';
+    if (role.includes('super_admin')) return 'super_admin';
     return null;
   } catch (error) {
     console.error('Error decoding JWT:', error);
@@ -40,35 +37,32 @@ function extractRoleFromToken(token: string): 'admin' | 'counselor' | null {
 
 export async function unifiedLogin(email: string, password: string): Promise<AuthResponse> {
   // Try admin login first
-  const adminResult = await adminLogin(email, password);
+  const userResult = await adminOrCounselorLogin(email, password);
   
-  if (adminResult.success && adminResult.data) {
-    const role = extractRoleFromToken(adminResult.data.access_token);
+  if (userResult.success && userResult.data) {
+    const role = extractRoleFromToken(userResult.data.access_token);
     return {
-      ...adminResult,
+      ...userResult,
       data: {
-        ...adminResult.data,
-        role: role || 'admin',
+        ...userResult.data,
       },
     };
   }
 
-  // If admin login fails, try counselor login
+  // If admin login failed, try guidance login
   const guidanceResult = await guidanceLogin(email, password);
-  
   if (guidanceResult.success && guidanceResult.data) {
     const role = extractRoleFromToken(guidanceResult.data.access_token);
     return {
       ...guidanceResult,
       data: {
         ...guidanceResult.data,
-        role: role || 'counselor',
       },
     };
   }
 
   // Return the most relevant error message
-  if (adminResult.code === 'NETWORK_ERROR' || guidanceResult.code === 'NETWORK_ERROR') {
+  if (userResult.code === 'NETWORK_ERROR' || userResult.code === 'NETWORK_ERROR') {
     return {
       success: false,
       code: 'NETWORK_ERROR',
@@ -77,5 +71,21 @@ export async function unifiedLogin(email: string, password: string): Promise<Aut
   }
 
   // Return guidance error as it was the last attempt
-  return guidanceResult;
+  if (userResult.data) {
+    const role = extractRoleFromToken(userResult.data.access_token) || 'counselor';
+    return {
+      success: userResult.success,
+      code: userResult.code,
+      message: userResult.message,
+      data: {
+        ...userResult.data,
+      },
+    };
+  }
+
+  return {
+    success: userResult.success,
+    code: userResult.code,
+    message: userResult.message,
+  };
 }

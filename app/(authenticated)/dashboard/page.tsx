@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
-import { authOptions } from "@/app/api/auth/[...nextAuth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -25,18 +25,26 @@ export default async function DashboardPage() {
             </div>
             <LogoutButton />
           </div>
-          
+
           <div className="space-y-4 text-[var(--text-muted)]">
             <div className="bg-[var(--bg)] p-4 rounded-lg">
-              <p className="text-sm font-medium text-[var(--text-muted)] mb-1">Email</p>
-              <p className="text-lg text-[var(--title)]">{session.user.email}</p>
+              <p className="text-sm font-medium text-[var(--text-muted)] mb-1">
+                Email
+              </p>
+              <p className="text-lg text-[var(--title)]">
+                {session.user.email}
+              </p>
             </div>
-            
+
             <div className="bg-[var(--bg)] p-4 rounded-lg">
-              <p className="text-sm font-medium text-[var(--text-muted)] mb-1">Role</p>
-              <p className="text-lg text-[var(--title)] capitalize">{session.user.role}</p>
+              <p className="text-sm font-medium text-[var(--text-muted)] mb-1">
+                Role
+              </p>
+              <p className="text-lg text-[var(--title)] capitalize">
+                {session.user.role}
+              </p>
             </div>
-            
+
             <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
               <p className="text-sm text-green-800 font-medium">
                 ✓ Authentication successful
