@@ -1,6 +1,7 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { unifiedLogin } from "@/lib/api/unifiedAuth";
+import { jwtDecode } from "jwt-decode";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -36,10 +37,22 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
+        let roleFromToken: "admin" | "counselor" | "super_admin" = "counselor";
+        try {
+          const decoded: any = jwtDecode(result.data.access_token);
+          const claim = decoded.role ?? decoded.user_type ?? decoded.userType ?? decoded.user_role;
+          if (claim === "admin" || claim === "administrator") roleFromToken = "admin";
+          else if (claim === "counselor" || claim === "guidance") roleFromToken = "counselor";
+          else if (claim === "super_admin") roleFromToken = "super_admin";
+        } catch (err) {
+          // keep fallback role; optionally log server-side
+          console.error("Failed to decode access token for role:", err);
+        }
+
         return {
           id: credentials.email,
           email: credentials.email,
-          role: result.data.role,
+          role: roleFromToken,
           accessToken: result.data.access_token,
           refreshToken: result.data.refresh_token,
         };
