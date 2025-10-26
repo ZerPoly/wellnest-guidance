@@ -5,20 +5,12 @@ import Header from "@/components/Header";
 import React, { useState, useCallback } from "react";
 import { AiOutlineClose } from 'react-icons/ai'; 
 
-import {
-  consultations,
-  previousConsultations,
-  type Consultation,
-} from "@/data/data";
-
 // --- IMPORT THE DEDICATED CONTENT FILE ---
-import Dashboard from "@/components/dashboard/DashboardContent(archive)";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import ConsultationVolumeBox from '@/components/dashboard/ConsultationStatistics';
-import FlaggedStudents from "@/components/dashboard/FlaggedStudents";
-import ConsultationsTable from "@/components/dashboard/ConsultationTable";
-import FilterDropdown from "@/components/dashboard/FilterDropdown";
+import CalendarView from "@/components/calendar/CalendarView";
+import AgendaList from "@/components/calendar/AgendaList";
+import ScheduleContent from "@/components/calendar/ScheduleContent";
 
 interface DashboardClientProps {}
 
@@ -28,20 +20,6 @@ const DashboardClient = ({}: DashboardClientProps) => {
     const userEmail = session?.user?.email;
     // Use userNamePart for the alt text/title
     const userNamePart = userEmail ? userEmail.split('@')[0] : 'User';
-
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    const [sessionTypeFilter, setSessionTypeFilter] = useState<string>("All");
-    const [chartFilter, setChartFilter] = useState<string>("Weekly");
-    // Filtered consultations for table
-    const upcomingConsultations: Consultation[] = consultations
-      .filter((c) => sessionTypeFilter === "All" || c.type.toLowerCase() === sessionTypeFilter.toLowerCase())
-      .filter((c) => c.email.toLowerCase().includes(searchQuery.toLowerCase()));
-  
-    const filteredPreviousConsultations: Consultation[] = previousConsultations
-      .filter((c) => sessionTypeFilter === "All" || c.type.toLowerCase() === sessionTypeFilter.toLowerCase())
-      .filter((c) => c.email.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    const filterDate = ["Weekly", "Monthly", "Yearly"];
   
   // 1. State for sidebar highlighting: Set default to match this specific page's name
   const [activeTab, setActiveTab] = useState<string>("Dashboard"); 
@@ -102,32 +80,14 @@ const DashboardClient = ({}: DashboardClientProps) => {
                 Dashboard
               </Link>
               <a className="font-regular text-[var(--text-muted)] ">
-                / Home
+                / Calendar
               </a>
             </div>
-            <div>
-              <h1 className="text-3xl font-extrabold text-[var(--title)] hidden sm:block">
-                {`Welcome back, ${userNamePart}!`}
-              </h1>
-            </div>
-          </div>
-          {/* Chart Filter */}
-          <div className="flex gap-2 justify-end">
-            <FilterDropdown
-              label="Filter"
-              options={filterDate}
-              selected={chartFilter}
-              onChange={setChartFilter}
-            />
           </div>
           
           {/* Use the imported content component */}
           <div className="flex flex-col md:flex-row gap-6">
-            <ConsultationVolumeBox/>
-            <FlaggedStudents/>
-          </div>
-          <div className="my-6">
-            <ConsultationsTable/>
+            <ScheduleContent />
           </div>
         </main>
       </div>

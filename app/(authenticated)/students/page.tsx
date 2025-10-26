@@ -5,6 +5,7 @@ import React, { useState, useCallback } from "react";
 import Sidebar from "@/components/Sidebar"; 
 import Header from "@/components/Header";   
 import { AiOutlineClose } from 'react-icons/ai'; 
+import StudentsContent from "@/components/students/StudentsContent";
 
 // Placeholder component for the specific students content
 const PlaceholderStudents = ({}: {}) => (
@@ -71,7 +72,7 @@ const StudentsClient = () => {
         
         {/* Main Content Area: Renders the static page content */}
         <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          <PlaceholderStudents />
+          <StudentsContent />
         </main>
       </div>
 

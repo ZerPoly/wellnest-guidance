@@ -1,95 +1,119 @@
-'use client';
+"use client";
 
-import React from 'react';
-// Import the necessary component and types directly from MUI X Charts
-import { PieChart, PieSeriesType } from '@mui/x-charts';
-
-// Renamed the interface to match the new component name
-interface FlaggedStudentsProps {}
-
-// --- Chart Data Definition ---
-const mockPieData = [
-  { id: 0, value: 5, label: 'In-Crisis', color: 'hsl(180, 70%, 50%)' }, 
-  { id: 1, value: 15, label: 'Struggling', color: 'hsl(263, 83%, 34%)' }, 
-];
+import { useEffect, useState } from "react";
+import { PieChart } from "@mui/x-charts";
 
 const CHART_TITLE = "Flagged Students";
-const CHART_HEIGHT = 350; // INCREASED height for a larger chart
-const CHART_WIDTH = 300;  // INCREASED width
-const TOTAL_STUDENTS = mockPieData.reduce((sum, item) => sum + item.value, 0);
+const CHART_HEIGHT = 380;
+const CHART_WIDTH = 300;
 
-/**
- * A self-contained "bento box" component that directly renders the MUI X Pie Chart
- * for flagged student statistics.
- */
-const FlaggedStudents: React.FC<FlaggedStudentsProps> = () => {
-  // Calculate the center point based on CHART_WIDTH and CHART_HEIGHT
-  const chartCenterX = CHART_WIDTH / 2;
-  const chartCenterY = CHART_HEIGHT / 2;
+export default function FlaggedStudents() {
+  const [data, setData] = useState<{ id: number; value: number; label: string; color: string }[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStudents = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("Missing authentication token");
+
+      const API = process.env.NEXT_PUBLIC_HW_USERS_API;
+      const res = await fetch(`${API}/api/v1/users/students?limit=1000`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "Failed to fetch");
+
+      const classifications = json.data.classifications || [];
+
+      const inCrisis = classifications.filter(
+        (s: any) => s.classification === "InCrisis" && s.is_flagged
+      ).length;
+
+      const struggling = classifications.filter(
+        (s: any) => s.classification === "Struggling" && s.is_flagged
+      ).length;
+
+      const formattedData = [
+        { id: 0, value: inCrisis, label: "In-Crisis", color: "hsl(180, 70%, 50%)" },
+        { id: 1, value: struggling, label: "Struggling", color: "hsl(263, 83%, 34%)" },
+      ];
+
+      setData(formattedData);
+      setTotal(inCrisis + struggling);
+    } catch (error) {
+      console.error("Pie chart fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const cx = CHART_WIDTH / 2;
+  const cy = CHART_HEIGHT / 2;
 
   return (
-    <div className="flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md flex flex-col relative"> 
-        
-        {/* Title: Left-align the title */}
-        <h2 className="text-xl font-bold text-[var(--text-muted)] mb-4">{CHART_TITLE}</h2>
-        
-        <div className="flex items-center justify-center w-full">
-            {/* Direct MUI X Pie Chart Implementation */}
-            <PieChart
-                series={[
-                    {
-                        data: mockPieData,
-                        innerRadius: 80, // INCREASED inner radius (from 60)
-                        outerRadius: 100, // INCREASED outer radius (from 80)
-                        paddingAngle: 5, 
-                        cornerRadius: 5, 
-                        startAngle: -90, 
-                        endAngle: 270,   
-                        // Set cx/cy relative to chart dimensions
-                        cx: chartCenterX, 
-                        cy: chartCenterY, 
-                    },
-                ]}
-                height={CHART_HEIGHT}
-                width={CHART_WIDTH} // Use increased fixed width
-                
-                // Apply custom styling to the internal SVG text elements (Font fix)
-                sx={{
-                    ".MuiChartsLegend-label, .MuiChartsAxis-tick, .MuiChartsAxis-label": {
-                        fontFamily: "Metropolis, sans-serif !important",
-                    },
-                    "text": {
-                        fontFamily: "Metropolis, sans-serif !important",
-                        fill: 'var(--text-muted)',
-                    }
-                }}
-                slotProps={{
-                    legend: {
-                        direction: 'row',
-                        position: { vertical: 'bottom', horizontal: 'middle' },
-                        padding: { top: 10, bottom: 0, left: 10, right: 10 },
-                        itemMarkWidth: 10,
-                        itemMarkHeight: 10,
-                    },
-                }}
-                // Reduced margins to allow better centering within the small space
-                margin={{ top: 5, bottom: 20, left: 5, right: 5 }} 
-            >
-                {/* Custom total label in the center of the donut */}
-                <text 
-                  x={chartCenterX} // Use calculated center X
-                  y={chartCenterY + 5} // Use calculated center Y (added slight offset for vertical alignment)
-                  textAnchor="middle" 
-                  dominantBaseline="middle" 
-                  className="text-3xl font-bold fill-[var(--text-color)]" // Increased font size for better visibility
-                  style={{ fontFamily: "Metropolis, sans-serif" }} 
-                >
-                  {TOTAL_STUDENTS}
-                </text>
-            </PieChart>
-        </div>
+    <div className="flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md flex flex-col relative">
+      <h2 className="text-xl font-bold text-[var(--text-muted)] mb-4">{CHART_TITLE}</h2>
+
+      {loading ? (
+  <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
+    Loading...
+  </div>
+) : total === 0 ? (
+  <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
+    No flagged students at the moment
+  </div>
+) : (
+  <div className="flex items-center justify-center w-full">
+    <PieChart
+      series={[
+        {
+          data,
+          innerRadius: 80,
+          outerRadius: 100,
+          paddingAngle: 5,
+          cornerRadius: 5,
+          startAngle: -90,
+          endAngle: 270,
+          cx,
+          cy,
+        },
+      ]}
+      height={CHART_HEIGHT}
+      width={CHART_WIDTH}
+      sx={{
+        "text": {
+          fontFamily: "Metropolis, sans-serif !important",
+          fill: "var(--text-muted)",
+        },
+      }}
+      slotProps={{
+        legend: {
+          direction: "row",
+          position: { vertical: "bottom", horizontal: "middle" },
+          padding: 10,
+        },
+      }}
+      margin={{ top: 5, bottom: 20, left: 5, right: 5 }}
+    >
+      <text
+        x={cx}
+        y={cy + 5}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        className="text-3xl font-bold fill-[var(--text-color)]"
+        style={{ fontFamily: "Metropolis, sans-serif" }}
+      >
+        {total}
+      </text>
+    </PieChart>
+  </div>
+)}
     </div>
   );
-};
-
-export default FlaggedStudents;
+}

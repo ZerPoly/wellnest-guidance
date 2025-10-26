@@ -17,8 +17,8 @@ export interface NavItem {
 // Navigation Links with role restrictions
 export const NAV_ITEMS: NavItem[] = [
   { name: "Dashboard", icon: AiOutlineDashboard, roles: ['admin', 'counselor', 'super_admin'], href: '/dashboard' },
-  { name: "Students", icon: AiOutlineTeam, roles: ['admin', 'counselor', 'super_admin'], href: '/students' },
   { name: "Calendar", icon: AiOutlineCalendar, roles: ['counselor', 'super_admin'], href: '/calendar' },
+  { name: "Students", icon: AiOutlineTeam, roles: ['admin', 'counselor', 'super_admin'], href: '/students' },
   { name: "Admin Tools", icon: AiOutlineTool, roles: ['admin', 'super_admin'], href: '/admin' },
   { name: "Settings", icon: AiOutlineSetting, roles: ['admin', 'counselor', 'super_admin'], href: '/settings' },
 ];

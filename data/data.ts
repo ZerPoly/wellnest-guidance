@@ -118,4 +118,3 @@ export const agendas: AgendaData[] = [
     description: "Interview session with candidate.",
   },
 ];
-

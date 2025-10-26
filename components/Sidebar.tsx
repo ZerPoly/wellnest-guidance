@@ -3,18 +3,17 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
+import { usePathname, useRouter } from 'next/navigation'; // <-- ADDED
 
 import { NAV_ITEMS, NavItem } from '@/data/sidebarData';
 
 import { 
-  AiOutlineMenuFold, 
-  AiOutlineMenuUnfold, 
   AiOutlineLogout 
 } from 'react-icons/ai';
 
 import { 
   TbLayoutSidebarRightCollapseFilled,
-  TbLayoutSidebarLeftCollapseFilled  
+  TbLayoutSidebarLeftCollapseFilled  
 } from "react-icons/tb";
 
 // Constant for localStorage key
@@ -23,9 +22,8 @@ const COLLAPSE_STATE_KEY = 'sidebarCollapsed';
 // --- Component Props ---
 
 interface SidebarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  isMobileOpen: boolean; // <--- NEW PROP ADDED
+  onLinkClick: (name: string) => void; 
+  isMobileOpen: boolean; 
 }
 
 // Helper component for minimalist elegant tooltip
@@ -42,9 +40,12 @@ const TooltipWrapper: React.FC<{ content: string; children: React.ReactNode }> =
 
 // --- Component ---
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen }) => { // <--- RECEIVING NEW PROP
+// UPDATED: Removed activeTab, setActiveTab from signature
+const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen }) => { 
   
-  // 1. Initialize state (unchanged - relies on SSR default)
+  const router = useRouter();
+  const currentPathname = usePathname(); // <-- USE PATHNAME HERE
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false); 
 
@@ -69,6 +70,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
     }
   }, [isCollapsed, isLoaded]);
 
+  // 2. LOGOUT HANDLER - Uses the initialized router for redirect and refresh
+  const handleSidebarLogout = useCallback(async () => {
+    await signOut({ redirect: false });
+    router.push("/");
+    router.refresh();
+  }, [router]);
 
   const toggleSidebar = useCallback(() => {
     setIsCollapsed(prev => !prev);
@@ -80,13 +87,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
   };
 
   const filteredItems = getFilteredNavItems(userRole);
-
-  // LOGIC FIX: Determine the visual collapsed state
-  // It is only truly collapsed if the persisted state says so AND we are NOT in the mobile overlay view.
   const isVisuallyCollapsed = isCollapsed && !isMobileOpen;
-
-  // The sidebar size now depends on the visual state
   const sidebarWidth = isVisuallyCollapsed ? 'w-20' : 'w-64';
+
+  // --- NEW: Function to check if a link is active based on URL ---
+  const isActiveLink = useCallback((href: string) => {
+    // Treat the root dashboard exactly.
+    if (href === '/dashboard') {
+        return currentPathname === '/dashboard';
+    }
+    // For all other pages (e.g., /dashboard/students or /dashboard/schedule), 
+    // check if the current path starts with the link's href.
+    return currentPathname.startsWith(href);
+  }, [currentPathname]);
+
 
   return (
     <aside
@@ -95,8 +109,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
       
       <div className="flex flex-col flex-1 gap-4">
         
-        {/* Logo and Toggle Button */}
-        <div className="h-10 flex items-center justify-between">
+        {/* Logo and Toggle Button - NOW USES CONDITIONAL JUSTIFICATION */}
+        <div className={`h-10 flex items-center ${isVisuallyCollapsed ? 'justify-center' : 'justify-between'}`}>
             {/* Show logo if NOT visually collapsed */}
             {!isVisuallyCollapsed && (
                 <img 
@@ -105,30 +119,42 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                     className="h-4 object-contain" 
                 />
             )}
-            <button
-                onClick={toggleSidebar}
-                title={isCollapsed ? "Expand" : "Collapse"}
-                // Only show this button on desktop (md:block)
-                className={`${isVisuallyCollapsed ? 'mx-auto' : ''} text-2xl p-2 rounded-full hover:bg-zinc-700 transition-colors text-gray-300 hidden md:block`}
-            >
-                {/* {isCollapsed ? <AiOutlineMenuUnfold size={24} /> : <AiOutlineMenuFold size={24} />} */}
-                {isCollapsed ? <TbLayoutSidebarRightCollapseFilled size={24} /> : <TbLayoutSidebarLeftCollapseFilled size={24} />}
-            </button>
+            
+            {/* Toggle Button: Only show this button on desktop (md:block) */}
+            {isVisuallyCollapsed ? (
+                <TooltipWrapper content={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
+                    <button
+                        onClick={toggleSidebar}
+                        className="text-2xl p-2 rounded-full hover:bg-zinc-700 transition-colors text-gray-300 hidden md:block"
+                    >
+                        {isCollapsed ? <TbLayoutSidebarRightCollapseFilled size={24} /> : <TbLayoutSidebarLeftCollapseFilled size={24} />}
+                    </button>
+                </TooltipWrapper>
+            ) : (
+                 <button
+                    onClick={toggleSidebar}
+                    className="text-2xl p-2 rounded-full hover:bg-zinc-700 transition-colors text-gray-300 hidden md:block"
+                >
+                    {isCollapsed ? <TbLayoutSidebarRightCollapseFilled size={24} /> : <TbLayoutSidebarLeftCollapseFilled size={24} />}
+                </button>
+            )}
         </div>
 
         {/* New Report Button */}
-        {!isVisuallyCollapsed && ( // Use isVisuallyCollapsed
+        {/* {!isVisuallyCollapsed && ( // Use isVisuallyCollapsed
           <button 
             className="w-full bg-blue-700 text-white font-medium py-2.5 px-4 text-sm rounded-xl shadow-lg hover:bg-blue-600 transition-colors"
           >
             + New Report
           </button>
-        )}
+        )} */}
 
         {/* Navigation Links */}
         <nav className="flex flex-col gap-1.5 pt-4 border-t border-zinc-800">
           {filteredItems.map((item) => {
-            const isActive = activeTab === item.name;
+            // Determine active state based on URL path
+            const isActive = isActiveLink(item.href); // <-- USING URL FOR TRUTH
+            
             const linkClasses = `p-2.5 flex items-center cursor-pointer transition-colors text-sm rounded-xl ${
               isActive 
                 ? 'bg-zinc-700 font-medium text-white' 
@@ -148,7 +174,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
             );
 
             return (
-              <Link key={item.name} href={item.href} onClick={() => setActiveTab(item.name)}>
+              // REMOVED setActiveTab from Link's onClick handler
+              // NOTE: The parent component (DashboardClient) must handle closing the mobile menu.
+              <Link key={item.name} href={item.href}> 
                 {isVisuallyCollapsed ? (
                   <TooltipWrapper content={item.name}>
                     <div className={linkClasses}>{linkContent}</div>
@@ -182,10 +210,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
             )}
         </div>
 
-        {/* Logout Button */}
+        {/* Logout Button (NOW USES THE ROBUST HANDLER) */}
         <button 
           className={`p-3 rounded-xl flex items-center transition-colors text-red-400 hover:bg-zinc-800 text-sm ${isVisuallyCollapsed ? 'justify-center' : ''}`}
-          onClick={() => signOut({ callbackUrl: '/' })}
+          onClick={handleSidebarLogout} // <-- USING NEW HANDLER
         >
           {isVisuallyCollapsed ? (
             <TooltipWrapper content="Logout">
