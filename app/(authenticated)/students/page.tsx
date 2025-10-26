@@ -9,7 +9,7 @@ import { AiOutlineClose } from 'react-icons/ai';
 // Placeholder component for the specific students content
 const PlaceholderStudents = ({}: {}) => (
   <div className="p-8 bg-white rounded-2xl shadow-xl border border-gray-100 min-h-[80vh]">
-    <h1 className="text-3xl font-extrabold text-gray-800">Student Prosadafiles & Data</h1>
+    <h1 className="text-3xl font-extrabold text-gray-800">Student Profiles & Data</h1>
     <p className="mt-2 text-gray-600">This section lists all students for search, filtering, and detailed profile views.</p>
   </div>
 );
@@ -66,7 +66,6 @@ const StudentsClient = () => {
 
       {/* 2. Main Content Container (Wraps Header and Students Content) */}
       <div className="flex flex-col flex-1 min-w-0">
-        
         {/* Header: Receives the toggle function */}
         <Header toggleMobileMenu={toggleMobileMenu} />
         

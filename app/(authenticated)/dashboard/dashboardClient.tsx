@@ -8,10 +8,19 @@ import { AiOutlineClose } from 'react-icons/ai';
 // --- IMPORT THE DEDICATED CONTENT FILE ---
 import Dashboard from "@/components/dashboard/DashboardContent";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import ConsultationVolumeBox from '@/components/dashboard/ConsultationStatistics';
+import FlaggedStudents from "@/components/dashboard/FlaggedStudents";
+import ConsultationsTable from "@/components/dashboard/ConsultationTable";
 
 interface DashboardClientProps {}
 
 const DashboardClient = ({}: DashboardClientProps) => {
+  const { data: session } = useSession();
+    const userRole = session?.user?.role || 'Guest';
+    const userEmail = session?.user?.email;
+    // Use userNamePart for the alt text/title
+    const userNamePart = userEmail ? userEmail.split('@')[0] : 'User';
   
   // 1. State for sidebar highlighting: Set default to match this specific page's name
   const [activeTab, setActiveTab] = useState<string>("Dashboard"); 
@@ -66,25 +75,29 @@ const DashboardClient = ({}: DashboardClientProps) => {
         
         {/* Main Content Area: Renders only the Dashboard content */}
         <main className="flex-1 overflow-y-auto px-6 pb-6 bg-gray-50">
-          <div className="flex flex-row space-x-1 my-4">
-            <Link href="/dashboard" className="font-extrabold text-[var(--text-muted)] hover:text-[var(--title)] transition-colors">
-              Dashboard
-            </Link>
-            <a className="font-regular text-[var(--text-muted)] ">
-              / Home
-            </a>
+          <div className="flex flex-col my-4">
+            <div className="flex flex-row space-x-1">
+              <Link href="/dashboard" className="font-extrabold text-[var(--text-muted)] hover:text-[var(--title)] transition-colors">
+                Dashboard
+              </Link>
+              <a className="font-regular text-[var(--text-muted)] ">
+                / Home
+              </a>
+            </div>
+            <div>
+              <h1 className="text-3xl font-extrabold text-[var(--title)] hidden sm:block">
+                {`Welcome back, ${userNamePart}!`}
+              </h1>
+            </div>
           </div>
+          
           {/* Use the imported content component */}
           <div className="flex flex-col md:flex-row gap-6">
-              {/* Box 1 */}
-              <div className="flex-1 border border-black h-24 bg-amber-300 p-4 rounded-lg shadow-md">
-                  Box 1 (h-24)
-              </div>
-              
-              {/* Box 2 */}
-              <div className="flex-1 border border-black h-80 bg-amber-300 p-4 rounded-lg shadow-md">
-                  Box 2 (h-80)
-              </div>
+            <ConsultationVolumeBox/>
+            <FlaggedStudents/>
+          </div>
+          <div className="my-6">
+            <ConsultationsTable/>
           </div>
         </main>
       </div>

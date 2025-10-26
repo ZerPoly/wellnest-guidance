@@ -34,9 +34,7 @@ const Header: React.FC<HeaderProps> = ({ toggleMobileMenu }) => {
             <AiOutlineMenu size={22} />
         </button>
 
-        <h1 className="text-2xl font-extrabold text-[var(--title)] hidden sm:block">
-          {`Welcome back, ${userNamePart}!`}
-        </h1>
+        
       </div>
 
       {/* Center: Search Bar (Hides on extra small mobile screens) */}

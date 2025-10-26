@@ -138,6 +138,9 @@
   --text-muted: hsl(200, 6%, 29%);
   --text-placeholder: hsl(200, 6%, 60%);
 
+  /* OUTLINE */
+  --outline: hsl(0, 0%, 86%);
+
 
   /* DARK MODE */
   --bg-dark1: hsl(222, 22%, 1%);
@@ -186,6 +189,7 @@
   --title: hsl(263, 83%, 34%);
   /* FOOTER TEXT */
   --footer-text: hsl(195, 5%, 84%);
+  --auth-text: hsl(220, 46%,96%);
 
 }
 
@@ -195,6 +199,11 @@
   --bg: hsl(220, 10%, 8%);
   --bg-light: hsl(220, 7%, 12%);
 
+  /* UPDATED DARK MODE OCT252025 */
+  /* --bg-dark: hsl(220, 19%, 6)$;
+  --bg: hsl(216, 28%, 7%);
+  --bg-light: hsl(214, 25%, 11%); */
+
   --text: hsl(220, 46%,96%);
   --text-muted: hsl(200, 6%, 70%);
 
@@ -202,6 +211,9 @@
   --title: hsl(263, 83%, 60%); 
   /* FOOTER TEXT */
   /* --footer-text: hsl(200, 6%, 70%); */
+  /* OUTLINE */
+  --outline: hsl(220, 4%, 51%);
+
 }
 
 @layer base {
@@ -343,4 +355,29 @@ button,
 
 .animate-modal-appear {
   animation: modal-appear 0.2s ease-out;
+}
+
+/* Default (light mode) scrollbar */
+::-webkit-scrollbar {
+  width: 12px; /* Adjust width as needed */
+}
+::-webkit-scrollbar-track {
+  background: var(--bg, #ffffff); /* Use your background variable */
+}
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted, #cccccc); /* Subtle color for thumb */
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-placeholder, #007bff); /* Hover effect */
+}
+/* Dark mode scrollbar (if using a class-based theme) */
+.dark ::-webkit-scrollbar-track {
+  background: var(--bg, #000000);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--text-muted, #666666);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-placeholder, #00aaff);
 }
