@@ -95,9 +95,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
             {/* Show logo if NOT visually collapsed */}
             {!isVisuallyCollapsed && (
                 <img 
-                    src="/img/wellnest-logo.png" 
+                    src="/img/title.png" 
                     alt="Wellnest Logo" 
-                    className="h-8 object-contain" 
+                    className="h-4 object-contain" 
                 />
             )}
             <button

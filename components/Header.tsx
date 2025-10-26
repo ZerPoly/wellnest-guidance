@@ -3,18 +3,20 @@
 import React from 'react';
 import { useSession } from 'next-auth/react';
 import { AiOutlineSearch, AiOutlineBell, AiOutlineMenu } from 'react-icons/ai'; 
-// NOTE: Assuming this path for your Theme Toggle component based on common project structure
 import ThemeToggleButton from '@/components/ThemeToggleButton'; 
 
 interface HeaderProps {
     toggleMobileMenu: () => void; 
 }
 
+// Define the static URL for your custom placeholder image
+const PLACEHOLDER_AVATAR_URL = '/img/avatar-icon.png';
+
 const Header: React.FC<HeaderProps> = ({ toggleMobileMenu }) => {
   const { data: session } = useSession();
   const userRole = session?.user?.role || 'Guest';
   const userEmail = session?.user?.email;
-  const userInitial = userEmail ? userEmail.charAt(0).toUpperCase() : 'G';
+  // Use userNamePart for the alt text/title
   const userNamePart = userEmail ? userEmail.split('@')[0] : 'User';
 
   return (
@@ -39,14 +41,14 @@ const Header: React.FC<HeaderProps> = ({ toggleMobileMenu }) => {
 
       {/* Center: Search Bar (Hides on extra small mobile screens) */}
       <div className="flex-1 max-w-xl mx-4 hidden sm:block">
-         <div className="relative">
+          <div className="relative">
             <AiOutlineSearch size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search students, reports, or trends..."
               className="w-full py-2 pl-10 pr-4 bg-zinc-800 text-gray-100 text-sm rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors placeholder-gray-500"
             />
-         </div>
+          </div>
       </div>
 
       {/* Right Side: Icons and User Avatar */}
@@ -59,16 +61,35 @@ const Header: React.FC<HeaderProps> = ({ toggleMobileMenu }) => {
         </button>
 
         {/* Theme Toggle Button */}
-        {/* The ThemeToggleButton is placed next to the bell and assumes it uses a similar button style internally. */}
         <ThemeToggleButton />
 
         {/* User Avatar & Role */}
         <div className="flex items-center space-x-2 cursor-pointer group">
           <div 
-            className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-lg border-2 border-blue-400 shadow-md"
+            className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center border-2 border-blue-400 shadow-md"
             title={`Role: ${userRole}`}
           >
-            {userInitial}
+            {/* Conditional rendering: use image if user.image is available, else use your custom placeholder */}
+            {session?.user?.image ? (
+              <img
+                src={session.user.image}
+                alt={userNamePart}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              // --- YOUR CUSTOM PLACEHOLDER ---
+              <img
+                src={PLACEHOLDER_AVATAR_URL}
+                alt={`${userNamePart}'s Avatar`}
+                // Ensure the placeholder image scales to cover the 100% of the div
+                className="w-full h-full object-cover" 
+                // Add a fallback if the image fails to load
+                onError={(e) => {
+                  // Fallback to a solid color/initials logic if the placeholder image is missing
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
