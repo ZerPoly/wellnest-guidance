@@ -1,4 +1,5 @@
 import SessionProvider from "@/lib/providers/SessionProvider";
+import ThemeProvider from '@/components/ThemeProvider';
 import "./globals.css";
 
 export const metadata = {
@@ -14,7 +15,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );
