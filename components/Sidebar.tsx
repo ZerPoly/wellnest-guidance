@@ -12,6 +12,11 @@ import {
   AiOutlineLogout 
 } from 'react-icons/ai';
 
+import { 
+  TbLayoutSidebarRightCollapseFilled,
+  TbLayoutSidebarLeftCollapseFilled  
+} from "react-icons/tb";
+
 // Constant for localStorage key
 const COLLAPSE_STATE_KEY = 'sidebarCollapsed';
 
@@ -106,7 +111,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                 // Only show this button on desktop (md:block)
                 className={`${isVisuallyCollapsed ? 'mx-auto' : ''} text-2xl p-2 rounded-full hover:bg-zinc-700 transition-colors text-gray-300 hidden md:block`}
             >
-                {isCollapsed ? <AiOutlineMenuUnfold size={24} /> : <AiOutlineMenuFold size={24} />}
+                {/* {isCollapsed ? <AiOutlineMenuUnfold size={24} /> : <AiOutlineMenuFold size={24} />} */}
+                {isCollapsed ? <TbLayoutSidebarRightCollapseFilled size={24} /> : <TbLayoutSidebarLeftCollapseFilled size={24} />}
             </button>
         </div>
 

@@ -7,6 +7,7 @@ import { AiOutlineClose } from 'react-icons/ai';
 
 // --- IMPORT THE DEDICATED CONTENT FILE ---
 import Dashboard from "@/components/dashboard/DashboardContent";
+import Link from "next/link";
 
 interface DashboardClientProps {}
 
@@ -64,7 +65,15 @@ const DashboardClient = ({}: DashboardClientProps) => {
         <Header toggleMobileMenu={toggleMobileMenu} />
         
         {/* Main Content Area: Renders only the Dashboard content */}
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
+        <main className="flex-1 overflow-y-auto px-6 pb-6 bg-gray-50">
+          <div className="flex flex-row space-x-1 my-4">
+            <Link href="/dashboard" className="font-extrabold text-[var(--text-muted)] hover:text-[var(--title)] transition-colors">
+              Dashboard
+            </Link>
+            <a className="font-regular text-[var(--text-muted)] ">
+              / Home
+            </a>
+          </div>
           {/* Use the imported content component */}
           <div className="flex flex-col md:flex-row gap-6">
               {/* Box 1 */}
