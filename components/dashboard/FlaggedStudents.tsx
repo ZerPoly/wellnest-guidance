@@ -16,13 +16,6 @@ interface FlaggedStudentsProps {}
 
 // --- Configuration ---
 
-// Student object shape used internally by the UI component
-interface StudentData {
-    id: string; // Mapped from student_id (for revealedStudents tracking)
-    status: 'In-Crisis' | 'Struggling' | 'Excelling' | 'Thriving' | 'Unknown';
-    is_flagged: boolean;
-}
-
 // Map classification names to colors for consistency across the app
 const CLASSIFICATION_COLORS: Record<StudentClassification['classification'], string> = {
     'InCrisis': 'hsl(0, 80%, 55%)',    // Red/Crimson for high alert
@@ -43,11 +36,12 @@ const CHART_WIDTH = 280;
  */
 const aggregateDataForPie = (classifications: StudentClassification[]): PieSeriesType['data'] => {
     // 1. Filter only students marked as flagged
-    const flaggedStudents = classifications.filter(s => s.is_flagged);
+    // NOTE: This now counts ALL students (flagged or not) to provide the full classification overview.
+    // If you only want Flagged: classifications.filter(s => s.is_flagged);
+    const studentsToCount = classifications; 
     
     // 2. Aggregate counts by classification type
-    const counts = flaggedStudents.reduce((acc, entry) => {
-        // Use the classification string as the key to count occurrences
+    const counts = studentsToCount.reduce((acc, entry) => {
         acc[entry.classification] = (acc[entry.classification] || 0) + 1;
         return acc;
     }, {} as Record<StudentClassification['classification'], number>);
@@ -95,18 +89,19 @@ export default function FlaggedStudents() {
         setError(null);
         
         try {
-          const result: FetchStudentsResponse = await fetchStudents(token, {
-            isFlagged: true,
-            limit: 500
-          });
+            // Fetch data (limit: 500 records for the aggregated chart view)
+            const result: FetchStudentsResponse = await fetchStudents(token, { limit: 500 });
 
-          if (result.success && result.data?.classifications) {
-            setPieData(aggregateDataForPie(result.data.classifications));
-          } else {
-            setError(result.message || "Failed to load student data.");
-          }
+            if (result.success && result.data?.classifications) {
+                // Transform and set the state
+                setPieData(aggregateDataForPie(result.data.classifications));
+            } else {
+                console.error("FlaggedStudents Fetch API Error:", result);
+                setError(result.message || "Failed to load student data.");
+            }
         } catch (err) {
-          setError("Network Error: Could not connect to the API server.");
+            console.error("FlaggedStudents Network Error:", err);
+            setError("Network Error: Could not connect to the API server.");
         } finally {
             setIsLoading(false);
         }
@@ -128,9 +123,9 @@ export default function FlaggedStudents() {
 
     if (error) {
          return (
-            <div className="flex-1 border border-red-400 h-full bg-red-50 p-4 rounded-2xl shadow-md flex items-center justify-center min-h-[350px] text-red-700">
+            <div className="flex-1 border border-red-400 h-full bg-red-50 p-4 rounded-2xl shadow-md flex flex-col items-center justify-center min-h-[350px] text-red-700">
                 <p className="font-bold">Error loading data:</p>
-                <p className="text-sm">{error}</p>
+                <p className="text-sm text-center mb-4">{error}</p>
                 <button
                     onClick={fetchData}
                     className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
@@ -151,7 +146,7 @@ export default function FlaggedStudents() {
             
             {TOTAL_STUDENTS === 0 ? (
                 <div className="flex items-center justify-center h-full min-h-[300px] text-gray-500 font-medium">
-                    No flagged students at the moment
+                    No student data available to visualize.
                 </div>
             ) : (
                 <div className="flex items-center justify-center w-full">

@@ -67,7 +67,7 @@ const StudentsContent: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<StudentClassification | null>(null);
-  const [revealedStudents, setRevealedStudents] = useState<string[]>([]);
+  const [revealedStudents, setRevealedStudents] = useState<string[]>([]); // Store student_id
 
   // Fetch students from API
   const fetchStudents = async (cursor?: string, append = false) => {
@@ -122,9 +122,11 @@ const StudentsContent: React.FC = () => {
 
   const handlePasswordSubmit = () => {
     if (password === "1234" && selectedStudent) {
+      // Add the student_id to revealed list
       setRevealedStudents((prev) => [...prev, selectedStudent.student_id]);
       setIsModalOpen(false);
       setPassword("");
+      setSelectedStudent(null); // Clear selected studentx  
     } else {
       alert("Incorrect password");
     }
@@ -262,6 +264,7 @@ const StudentsContent: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {filteredStudents.length > 0 ? (
           filteredStudents.map((student) => {
+            // Check if this student's email should be revealed
             const revealed = revealedStudents.includes(student.student_id);
             const { subject, body } = getEmailTemplate(student);
 
@@ -332,7 +335,11 @@ const StudentsContent: React.FC = () => {
       {/* Password Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setPassword("");
+          setSelectedStudent(null);
+        }}
         title="Password Required"
       >
         <div className="-mt-6 space-y-6">
@@ -343,6 +350,11 @@ const StudentsContent: React.FC = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter password"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handlePasswordSubmit();
+              }
+            }}
           />
           <button
             onClick={handlePasswordSubmit}

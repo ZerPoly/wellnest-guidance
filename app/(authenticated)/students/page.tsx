@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";   
 import { AiOutlineClose } from 'react-icons/ai'; 
 import StudentsContent from "@/components/students/StudentsContent";
+import FlaggedStudents from "@/components/dashboard/FlaggedStudents";
 
 // Placeholder component for the specific students content
 const PlaceholderStudents = ({}: {}) => (
