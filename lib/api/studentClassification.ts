@@ -1,127 +1,151 @@
-// lib/api/studentClassification.ts
-export type StudentClassificationRecord = {
+const API_BASE_URL = process.env.NEXT_PUBLIC_HW_USERS_API || '';
+
+export type ClassificationType = "Excelling" | "Thriving" | "Struggling" | "InCrisis";
+
+export interface StudentClassification {
   classification_id: string;
   student_id: string;
-  classification: "Excelling" | "Thriving" | "Struggling" | "InCrisis" | string;
+  classification: ClassificationType;
   is_flagged: boolean;
   classified_at: string;
-  email?: string; // anonymized form per API
-  department_name?: string;
-};
+  email: string;
+  department_name: string;
+}
 
-export type StudentClassificationResponse = {
+export interface FetchStudentsResponse {
   success: boolean;
   code: string;
   message: string;
   data?: {
-    classifications: StudentClassificationRecord[];
+    classifications: StudentClassification[];
     hasMore: boolean;
     nextCursor: string | null;
   };
-};
+}
 
-export type StudentClassificationQuery = {
-  classification?: string;
+export interface FetchStudentsParams {
+  classification?: ClassificationType;
   isFlagged?: boolean;
   limit?: number;
   cursor?: string;
-};
-
-// small exponential backoff retry helper
-const withRetry = async <T>(fn: () => Promise<T>, retries = 3): Promise<T> => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (i === retries - 1) throw err;
-      const delay = Math.pow(2, i) * 500;
-      await new Promise((r) => setTimeout(r, delay));
-    }
-  }
-  throw new Error("Retries exhausted");
-};
-
-const API_BASE = process.env.NEXT_PUBLIC_HW_USERS_API;
-const ENDPOINT = "/api/v1/users/students";
-
-if (!API_BASE) {
-  console.warn(
-    "NEXT_PUBLIC_HW_USERS_API is not set. studentClassification requests will fail."
-  );
 }
 
-/**
- * Fetch student classification records.
- * @param accessToken - Bearer token from NextAuth session (session.user.accessToken)
- * @param query - query params (classification, isFlagged, limit, cursor)
- */
-export async function fetchStudentClassifications(
-  accessToken: string,
-  query: StudentClassificationQuery = {}
-): Promise<StudentClassificationResponse> {
-  if (!API_BASE) {
-    return {
-      success: false,
-      code: "CONFIG_ERROR",
-      message: "NEXT_PUBLIC_HW_USERS_API is not configured",
-    };
-  }
-
-  if (!accessToken) {
-    return {
-      success: false,
-      code: "UNAUTHORIZED",
-      message: "Missing access token",
-    };
-  }
-
-  const url = new URL(`${API_BASE}${ENDPOINT}`);
-
-  if (query.classification) url.searchParams.append("classification", query.classification);
-  if (typeof query.isFlagged === "boolean") url.searchParams.append("isFlagged", String(query.isFlagged));
-  if (query.limit) url.searchParams.append("limit", String(query.limit));
-  if (query.cursor) url.searchParams.append("cursor", query.cursor);
-
+export async function fetchStudents(
+  token: string,
+  params?: FetchStudentsParams
+): Promise<FetchStudentsResponse> {
   try {
-    const response = await withRetry(() =>
-      fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
-        },
-      })
-    );
-
-    // handle 304 if server uses caching (unlikely for GET /students but safe)
-    if (response.status === 304) {
+    if (!API_BASE_URL) {
+      console.error('❌ NEXT_PUBLIC_HW_USERS_API is not set in .env.local');
       return {
-        success: true,
-        code: "NOT_MODIFIED",
-        message: "Not modified",
-        data: { classifications: [], hasMore: false, nextCursor: null },
+        success: false,
+        code: 'CONFIG_ERROR',
+        message: 'API base URL is not configured. Please check your .env.local file.',
       };
     }
 
-    const body = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      return (
-        body || {
-          success: false,
-          code: "HTTP_ERROR",
-          message: `Failed to fetch students (status ${response.status})`,
-        }
-      );
+    const queryParams = new URLSearchParams();
+    
+    if (params?.classification) {
+      queryParams.append('classification', params.classification);
+    }
+    
+    if (params?.isFlagged !== undefined) {
+      queryParams.append('isFlagged', params.isFlagged.toString());
+    }
+    
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    
+    if (params?.cursor) {
+      queryParams.append('cursor', params.cursor);
     }
 
-    return body as StudentClassificationResponse;
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/api/v1/users/students${queryString ? `?${queryString}` : ''}`;
+    
+    console.log('🔵 Fetching students:');
+    console.log('   - URL:', url);
+    console.log('   - Params:', params);
+    console.log('   - Token exists:', !!token);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    });
+
+    console.log('🔵 Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🔴 API Error:', errorText);
+      
+      try {
+        const data = JSON.parse(errorText);
+        
+        // Provide more helpful error messages
+        let userMessage = data.message || 'Failed to fetch students';
+        
+        if (response.status === 500) {
+          userMessage = 'The backend server is experiencing issues. Please try again later or contact support.';
+        } else if (response.status === 401) {
+          userMessage = 'Your session has expired. Please log in again.';
+        } else if (response.status === 403) {
+          userMessage = 'You do not have permission to view student data.';
+        }
+        
+        return {
+          success: false,
+          code: data.code || 'FETCH_ERROR',
+          message: userMessage,
+        };
+      } catch {
+        return {
+          success: false,
+          code: 'FETCH_ERROR',
+          message: response.status === 500 
+            ? 'The backend server is experiencing issues. Please try again later.'
+            : `API returned ${response.status}`,
+        };
+      }
+    }
+
+    const data: FetchStudentsResponse = await response.json();
+    console.log('✅ Students fetched:', data.data?.classifications?.length || 0);
+
+    return data;
   } catch (error: any) {
-    console.error("fetchStudentClassifications error:", error);
+    console.error('❌ Network error:', error);
     return {
       success: false,
-      code: "NETWORK_ERROR",
-      message: error?.message || "Network error while fetching classifications",
+      code: 'NETWORK_ERROR',
+      message: `Unable to connect to the server. Please check your internet connection.`,
     };
   }
+}
+
+export function getClassificationColor(classification: ClassificationType): string {
+  const colorMap: Record<ClassificationType, string> = {
+    'Excelling': 'bg-green-100 text-green-800',
+    'Thriving': 'bg-blue-100 text-blue-800',
+    'Struggling': 'bg-yellow-100 text-yellow-800',
+    'InCrisis': 'bg-red-100 text-red-800',
+  };
+  return colorMap[classification] || 'bg-gray-100 text-gray-800';
+}
+
+export function formatClassificationDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }

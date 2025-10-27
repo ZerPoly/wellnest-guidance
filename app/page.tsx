@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, FormEvent, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
@@ -16,13 +16,17 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Redirect if already authenticated
+  // ❌ REMOVED: The logic that automatically redirects authenticated users
+  //             from '/' to '/dashboard' via useEffect.
+  //             The user will now stay on the root page if authenticated.
+  /*
   useEffect(() => {
     if (status === "authenticated") {
       const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
       router.push(callbackUrl);
     }
   }, [status, router, searchParams]);
+  */
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -43,6 +47,7 @@ export default function LoginPage() {
       }
 
       if (result?.ok) {
+        // SUCCESS: Redirect the user only AFTER successful login attempt
         const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
         router.push(callbackUrl);
         router.refresh();
@@ -54,7 +59,31 @@ export default function LoginPage() {
     }
   };
 
-  // Show loading while checking session
+  // If already authenticated, show a message instead of the form
+  if (status === "authenticated") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--primary)] p-4">
+        <div className="w-full max-w-md bg-[var(--bg-light)] rounded-2xl p-8 shadow-2xl space-y-6 text-center">
+          <h1 className="text-3xl font-bold text-[var(--cyan)]">Welcome Back!</h1>
+          <p className="text-[var(--text-muted)]">You are already signed in as {session.user?.email}.</p>
+          <a
+            href="/dashboard"
+            className="w-full inline-flex items-center justify-center px-4 py-3 text-lg font-bold rounded-full transition-colors bg-[var(--cyan)] hover:bg-[var(--cyan-dark)] text-[var(--text1)]"
+          >
+            Go to Dashboard
+          </a>
+          <button 
+            onClick={() => { router.push('/api/auth/signout'); }}
+            className="w-full mt-4 px-4 py-2 text-sm text-red-500 hover:text-red-700 transition"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while checking session status before rendering form
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--primary)]">

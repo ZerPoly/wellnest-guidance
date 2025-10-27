@@ -1,119 +1,213 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { PieChart } from "@mui/x-charts";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { PieChart, PieSeriesType } from "@mui/x-charts";
 
-const CHART_TITLE = "Flagged Students";
-const CHART_HEIGHT = 380;
-const CHART_WIDTH = 300;
+// Import API fetcher and types
+import { 
+    fetchStudents, 
+    StudentClassification,
+    FetchStudentsResponse 
+} from '@/lib/api/studentClassification'; 
 
+// Renamed the interface to match the new component name
+interface FlaggedStudentsProps {}
+
+// --- Configuration ---
+
+// Student object shape used internally by the UI component
+interface StudentData {
+    id: string; // Mapped from student_id (for revealedStudents tracking)
+    status: 'In-Crisis' | 'Struggling' | 'Excelling' | 'Thriving' | 'Unknown';
+    is_flagged: boolean;
+}
+
+// Map classification names to colors for consistency across the app
+const CLASSIFICATION_COLORS: Record<StudentClassification['classification'], string> = {
+    'InCrisis': 'hsl(0, 80%, 55%)',    // Red/Crimson for high alert
+    'Struggling': 'hsl(31, 100%, 61%)', // Orange/Amber
+    'Thriving': 'hsl(180, 70%, 50%)',   // Cyan/Teal
+    'Excelling': 'hsl(141, 86%, 46%)',  // Green
+};
+
+const CHART_TITLE = "Student Classification Summary";
+const CHART_HEIGHT = 350; 
+const CHART_WIDTH = 280;  
+
+/**
+ * Helper function to transform raw API data into MUI Pie Chart format.
+ * Focuses only on Flagged Students for the pie chart.
+ * @param classifications Array of student classification records.
+ * @returns PieSeriesType data structure.
+ */
+const aggregateDataForPie = (classifications: StudentClassification[]): PieSeriesType['data'] => {
+    // 1. Filter only students marked as flagged
+    const flaggedStudents = classifications.filter(s => s.is_flagged);
+    
+    // 2. Aggregate counts by classification type
+    const counts = flaggedStudents.reduce((acc, entry) => {
+        // Use the classification string as the key to count occurrences
+        acc[entry.classification] = (acc[entry.classification] || 0) + 1;
+        return acc;
+    }, {} as Record<StudentClassification['classification'], number>);
+
+    // 3. Transform aggregated counts into MUI Pie Data format
+    return Object.entries(counts)
+        .map(([label, value], index) => ({
+            id: index,
+            value: value,
+            label: label,
+            color: CLASSIFICATION_COLORS[label as StudentClassification['classification']],
+        }))
+        // Filter out zero-value slices
+        .filter(item => item.value > 0);
+};
+
+/**
+ * A self-contained "bento box" component that fetches and renders the student classification Pie Chart.
+ */
 export default function FlaggedStudents() {
-  const [data, setData] = useState<{ id: number; value: number; label: string; color: string }[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+    const { data: session } = useSession();
+    const token = session?.user?.accessToken;
 
-  const fetchStudents = async () => {
-    try {
-      const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("Missing authentication token");
+    const [pieData, setPieData] = useState<PieSeriesType['data']>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-      const API = process.env.NEXT_PUBLIC_HW_USERS_API;
-      const res = await fetch(`${API}/api/v1/users/students?limit=1000`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    // Calculate total students (memoized)
+    const TOTAL_STUDENTS = useMemo(() => {
+        return pieData.reduce((sum, item) => sum + item.value, 0);
+    }, [pieData]);
 
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || "Failed to fetch");
+    const chartCenterX = CHART_WIDTH / 2;
+    const chartCenterY = CHART_HEIGHT / 2;
 
-      const classifications = json.data.classifications || [];
+    // --- Data Fetching Effect ---
+    const fetchData = useCallback(async () => {
+        if (!token) {
+            setIsLoading(false);
+            setError("Authentication token not available. Please ensure you are logged in.");
+            return;
+        }
 
-      const inCrisis = classifications.filter(
-        (s: any) => s.classification === "InCrisis" && s.is_flagged
-      ).length;
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+          const result: FetchStudentsResponse = await fetchStudents(token, {
+            isFlagged: true,
+            limit: 500
+          });
 
-      const struggling = classifications.filter(
-        (s: any) => s.classification === "Struggling" && s.is_flagged
-      ).length;
+          if (result.success && result.data?.classifications) {
+            setPieData(aggregateDataForPie(result.data.classifications));
+          } else {
+            setError(result.message || "Failed to load student data.");
+          }
+        } catch (err) {
+          setError("Network Error: Could not connect to the API server.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [token]);
 
-      const formattedData = [
-        { id: 0, value: inCrisis, label: "In-Crisis", color: "hsl(180, 70%, 50%)" },
-        { id: 1, value: struggling, label: "Struggling", color: "hsl(263, 83%, 34%)" },
-      ];
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
-      setData(formattedData);
-      setTotal(inCrisis + struggling);
-    } catch (error) {
-      console.error("Pie chart fetch error:", error);
-    } finally {
-      setLoading(false);
+    // --- Loading and Error States ---
+
+    if (isLoading) {
+        return (
+            <div className="flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md flex items-center justify-center min-h-[350px]">
+                <p className="text-gray-500 font-medium">Loading Classification Data...</p>
+            </div>
+        );
     }
-  };
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
+    if (error) {
+         return (
+            <div className="flex-1 border border-red-400 h-full bg-red-50 p-4 rounded-2xl shadow-md flex items-center justify-center min-h-[350px] text-red-700">
+                <p className="font-bold">Error loading data:</p>
+                <p className="text-sm">{error}</p>
+                <button
+                    onClick={fetchData}
+                    className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
 
-  const cx = CHART_WIDTH / 2;
-  const cy = CHART_HEIGHT / 2;
+    // --- Main Render (Chart or No Data) ---
 
-  return (
-    <div className="flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md flex flex-col relative">
-      <h2 className="text-xl font-bold text-[var(--text-muted)] mb-4">{CHART_TITLE}</h2>
-
-      {loading ? (
-  <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
-    Loading...
-  </div>
-) : total === 0 ? (
-  <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
-    No flagged students at the moment
-  </div>
-) : (
-  <div className="flex items-center justify-center w-full">
-    <PieChart
-      series={[
-        {
-          data,
-          innerRadius: 80,
-          outerRadius: 100,
-          paddingAngle: 5,
-          cornerRadius: 5,
-          startAngle: -90,
-          endAngle: 270,
-          cx,
-          cy,
-        },
-      ]}
-      height={CHART_HEIGHT}
-      width={CHART_WIDTH}
-      sx={{
-        "text": {
-          fontFamily: "Metropolis, sans-serif !important",
-          fill: "var(--text-muted)",
-        },
-      }}
-      slotProps={{
-        legend: {
-          direction: "row",
-          position: { vertical: "bottom", horizontal: "middle" },
-          padding: 10,
-        },
-      }}
-      margin={{ top: 5, bottom: 20, left: 5, right: 5 }}
-    >
-      <text
-        x={cx}
-        y={cy + 5}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        className="text-3xl font-bold fill-[var(--text-color)]"
-        style={{ fontFamily: "Metropolis, sans-serif" }}
-      >
-        {total}
-      </text>
-    </PieChart>
-  </div>
-)}
-    </div>
-  );
+    return (
+        <div className="flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md flex flex-col relative"> 
+            
+            {/* Title: Left-align the title */}
+            <h2 className="text-xl font-bold text-[var(--text-muted)] mb-4">{CHART_TITLE}</h2>
+            
+            {TOTAL_STUDENTS === 0 ? (
+                <div className="flex items-center justify-center h-full min-h-[300px] text-gray-500 font-medium">
+                    No flagged students at the moment
+                </div>
+            ) : (
+                <div className="flex items-center justify-center w-full">
+                    <PieChart
+                        series={[
+                            {
+                                data: pieData, 
+                                innerRadius: 80, 
+                                outerRadius: 100, 
+                                paddingAngle: 5, 
+                                cornerRadius: 5, 
+                                startAngle: -90, 
+                                endAngle: 270,   
+                                cx: chartCenterX, 
+                                cy: chartCenterY, 
+                            },
+                        ]}
+                        height={CHART_HEIGHT}
+                        width={CHART_WIDTH} 
+                        
+                        sx={{
+                            ".MuiChartsLegend-label, .MuiChartsAxis-tick, .MuiChartsAxis-label": {
+                                fontFamily: "Metropolis, sans-serif !important",
+                            },
+                            "text": {
+                                fontFamily: "Metropolis, sans-serif !important",
+                                fill: 'var(--text-muted)',
+                            }
+                        }}
+                        slotProps={{
+                            legend: {
+                                direction: 'row',
+                                position: { vertical: 'bottom', horizontal: 'middle' },
+                                padding: { top: 10, bottom: 0, left: 10, right: 10 },
+                                itemMark: {
+                                    width: 10,
+                                    height: 10,
+                                },
+                            },
+                        }}
+                        margin={{ top: 5, bottom: 20, left: 5, right: 5 }} 
+                    >
+                        {/* Custom total label in the center of the donut */}
+                        <text 
+                          x={chartCenterX} 
+                          y={chartCenterY + 5} 
+                          textAnchor="middle" 
+                          dominantBaseline="middle" 
+                          className="text-3xl font-bold fill-[var(--text-color)]" 
+                          style={{ fontFamily: "Metropolis, sans-serif" }} 
+                        >
+                          {TOTAL_STUDENTS}
+                        </text>
+                    </PieChart>
+                </div>
+            )}
+        </div>
+    );
 }
