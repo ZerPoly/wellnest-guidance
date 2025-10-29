@@ -1,119 +1,125 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import * as React from "react"
 import { useSession } from "next-auth/react";
-import { PieChart, PieSeriesType } from "@mui/x-charts";
+// Recharts Imports
+import { Label, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { TrendingUp } from "lucide-react"; 
 
 // Import API fetcher and types
 import { 
     fetchStudents, 
     StudentClassification,
-    FetchStudentsResponse 
+    FetchStudentsResponse
 } from '@/lib/api/studentClassification'; 
-
-// Renamed the interface to match the new component name
-interface FlaggedStudentsProps {}
 
 // --- Configuration ---
 
-// Map classification names to colors for consistency across the app
+// Map classification names to explicit HSL colors (stable)
 const CLASSIFICATION_COLORS: Record<StudentClassification['classification'], string> = {
-    'InCrisis': 'hsl(0, 80%, 55%)',    // Red/Crimson for high alert
-    'Struggling': 'hsl(31, 100%, 61%)', // Orange/Amber
-    'Thriving': 'hsl(180, 70%, 50%)',   // Cyan/Teal
-    'Excelling': 'hsl(141, 86%, 46%)',  // Green
+    'InCrisis': "hsl(0, 80%, 55%)",    // Red
+    'Struggling': "hsl(31, 100%, 61%)", // Orange
+    'Thriving': "hsl(180, 70%, 50%)",   // Cyan
+    'Excelling': "hsl(141, 86%, 46%)",  // Green
 };
 
 const CHART_TITLE = "Student Classification Summary";
 const CHART_HEIGHT = 350; 
-const CHART_WIDTH = 280;  
+const CHART_WIDTH = 280; 
+
+// Recharts formatted data type
+interface ChartDataPoint {
+    name: string;
+    value: number;
+    fill: string;
+}
 
 /**
- * Helper function to transform raw API data into MUI Pie Chart format.
- * Focuses only on Flagged Students for the pie chart.
- * @param classifications Array of student classification records.
- * @returns PieSeriesType data structure.
+ * Helper function to transform raw API data into Recharts format.
  */
-const aggregateDataForPie = (classifications: StudentClassification[]): PieSeriesType['data'] => {
-    // 1. Filter only students marked as flagged
-    // NOTE: This now counts ALL students (flagged or not) to provide the full classification overview.
-    // If you only want Flagged: classifications.filter(s => s.is_flagged);
+const aggregateDataForPie = (classifications: StudentClassification[]): ChartDataPoint[] => {
     const studentsToCount = classifications; 
     
-    // 2. Aggregate counts by classification type
     const counts = studentsToCount.reduce((acc, entry) => {
         acc[entry.classification] = (acc[entry.classification] || 0) + 1;
         return acc;
     }, {} as Record<StudentClassification['classification'], number>);
 
-    // 3. Transform aggregated counts into MUI Pie Data format
     return Object.entries(counts)
-        .map(([label, value], index) => ({
-            id: index,
-            value: value,
-            label: label,
-            color: CLASSIFICATION_COLORS[label as StudentClassification['classification']],
+        .map(([classification, count], index) => ({
+            name: classification,
+            value: count,
+            fill: CLASSIFICATION_COLORS[classification as keyof typeof CLASSIFICATION_COLORS] || "hsl(0 0% 50%)",
         }))
-        // Filter out zero-value slices
         .filter(item => item.value > 0);
 };
 
-/**
- * A self-contained "bento box" component that fetches and renders the student classification Pie Chart.
- */
+// --- Custom Tooltip (Functional Component) ---
+// This component replaces the complex ChartTooltipContent wrapper 
+// to ensure the tooltip renders correctly without missing Shadcn files.
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        const item = payload[0];
+        // Use standard Tailwind classes, avoiding CSS variables for stability
+        return (
+            <div className="p-3 bg-white border border-gray-300 rounded-lg shadow-md text-sm text-gray-700">
+                <p className="font-bold mb-1" style={{ color: item.fill }}>{item.name}</p>
+                <p>{`Students: ${item.value.toLocaleString()}`}</p>
+            </div>
+        );
+    }
+    return null;
+};
+
+
+// --- Main Component ---
 export default function FlaggedStudents() {
     const { data: session } = useSession();
     const token = session?.user?.accessToken;
 
-    const [pieData, setPieData] = useState<PieSeriesType['data']>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [chartData, setChartData] = React.useState<ChartDataPoint[]>([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
 
     // Calculate total students (memoized)
-    const TOTAL_STUDENTS = useMemo(() => {
-        return pieData.reduce((sum, item) => sum + item.value, 0);
-    }, [pieData]);
+    const TOTAL_STUDENTS = React.useMemo(() => {
+        return chartData.reduce((sum, item) => sum + item.value, 0);
+    }, [chartData]);
 
-    const chartCenterX = CHART_WIDTH / 2;
-    const chartCenterY = CHART_HEIGHT / 2;
-
-    // --- Data Fetching Effect ---
-    const fetchData = useCallback(async () => {
+    // --- Data Fetching ---
+    const fetchData = React.useCallback(async () => {
         if (!token) {
-            setIsLoading(false);
-            setError("Authentication token not available. Please ensure you are logged in.");
+            setLoading(false);
+            setError("Authentication token not available.");
             return;
         }
 
-        setIsLoading(true);
+        setLoading(true);
         setError(null);
         
         try {
-            // Fetch data (limit: 500 records for the aggregated chart view)
             const result: FetchStudentsResponse = await fetchStudents(token, { limit: 500 });
 
             if (result.success && result.data?.classifications) {
-                // Transform and set the state
-                setPieData(aggregateDataForPie(result.data.classifications));
+                const formatted = aggregateDataForPie(result.data.classifications);
+                setChartData(formatted);
             } else {
-                console.error("FlaggedStudents Fetch API Error:", result);
                 setError(result.message || "Failed to load student data.");
             }
         } catch (err) {
-            console.error("FlaggedStudents Network Error:", err);
             setError("Network Error: Could not connect to the API server.");
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
     }, [token]);
 
-    useEffect(() => {
+    React.useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    // --- Loading and Error States ---
+    // --- Loading and Error States (Simplified) ---
 
-    if (isLoading) {
+    if (loading) {
         return (
             <div className="flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md flex items-center justify-center min-h-[350px]">
                 <p className="text-gray-500 font-medium">Loading Classification Data...</p>
@@ -136,73 +142,104 @@ export default function FlaggedStudents() {
         );
     }
 
-    // --- Main Render (Chart or No Data) ---
-
+    // --- Main Render (Chart) ---
     return (
-        <div className="flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md flex flex-col relative"> 
+        <div className="flex flex-col flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md">
             
-            {/* Title: Left-align the title */}
-            <h2 className="text-xl font-bold text-[var(--text-muted)] mb-4">{CHART_TITLE}</h2>
-            
-            {TOTAL_STUDENTS === 0 ? (
-                <div className="flex items-center justify-center h-full min-h-[300px] text-gray-500 font-medium">
-                    No student data available to visualize.
+            {/* Header (replicates CardHeader content) */}
+            <header className="flex items-center justify-between pb-0">
+                <div className="grid gap-1">
+                    <h2 className="text-xl font-bold text-[var(--text-muted)]">{CHART_TITLE}</h2>
+                    <p className="text-sm text-[var(--text-muted)]">Total: {TOTAL_STUDENTS.toLocaleString()} Students</p>
                 </div>
-            ) : (
-                <div className="flex items-center justify-center w-full">
-                    <PieChart
-                        series={[
-                            {
-                                data: pieData, 
-                                innerRadius: 80, 
-                                outerRadius: 100, 
-                                paddingAngle: 5, 
-                                cornerRadius: 5, 
-                                startAngle: -90, 
-                                endAngle: 270,   
-                                cx: chartCenterX, 
-                                cy: chartCenterY, 
-                            },
-                        ]}
-                        height={CHART_HEIGHT}
-                        width={CHART_WIDTH} 
-                        
-                        sx={{
-                            ".MuiChartsLegend-label, .MuiChartsAxis-tick, .MuiChartsAxis-label": {
-                                fontFamily: "Metropolis, sans-serif !important",
-                            },
-                            "text": {
-                                fontFamily: "Metropolis, sans-serif !important",
-                                fill: 'var(--text-muted)',
-                            }
-                        }}
-                        slotProps={{
-                            legend: {
-                                direction: 'row',
-                                position: { vertical: 'bottom', horizontal: 'middle' },
-                                padding: { top: 10, bottom: 0, left: 10, right: 10 },
-                                itemMark: {
-                                    width: 10,
-                                    height: 10,
-                                },
-                            },
-                        }}
-                        margin={{ top: 5, bottom: 20, left: 5, right: 5 }} 
-                    >
-                        {/* Custom total label in the center of the donut */}
-                        <text 
-                          x={chartCenterX} 
-                          y={chartCenterY + 5} 
-                          textAnchor="middle" 
-                          dominantBaseline="middle" 
-                          className="text-3xl font-bold fill-[var(--text-color)]" 
-                          style={{ fontFamily: "Metropolis, sans-serif" }} 
-                        >
-                          {TOTAL_STUDENTS}
-                        </text>
-                    </PieChart>
+            </header>
+
+            <div className="flex-1 pb-0 flex justify-center">
+                
+                {TOTAL_STUDENTS === 0 ? (
+                    <div className="flex items-center justify-center min-h-[300px] text-gray-500 font-medium">
+                        No student data available to visualize.
+                    </div>
+                ) : (
+                    // Recharts Container
+                    <div className="mx-auto aspect-square w-full max-w-[300px]" style={{ height: CHART_HEIGHT }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                {/* TOOLTIP FIX: Using standard Recharts Tooltip with CustomTooltip content */}
+                                <Tooltip
+                                    cursor={false}
+                                    content={<CustomTooltip />}
+                                />
+                                
+                                <Pie
+                                    data={chartData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    innerRadius={80}
+                                    outerRadius={100}
+                                    strokeWidth={1}
+                                    paddingAngle={2}
+                                    startAngle={90}
+                                    endAngle={450}
+                                >
+                                    {/* Map Cell components to apply colors */}
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                    
+                                    <Label
+                                        content={({ viewBox }) => {
+                                            if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                                const centerY = (viewBox.cy || 0) - 10; 
+                                                
+                                                return (
+                                                    <text x={viewBox.cx} y={centerY} textAnchor="middle" dominantBaseline="middle">
+                                                        <tspan x={viewBox.cx} y={centerY} 
+                                                               style={{ fontSize: '32px', fontFamily: 'Metropolis, sans-serif', fontWeight: 700, fill: 'var(--title)' }}
+                                                        >
+                                                            {TOTAL_STUDENTS.toLocaleString()}
+                                                        </tspan>
+                                                        <tspan x={viewBox.cx} y={centerY + 24} 
+                                                               style={{ fontSize: '14px', fontFamily: 'Metropolis, sans-serif', fill: 'var(--text-muted)' }}
+                                                        >
+                                                            Total Students
+                                                        </tspan>
+                                                    </text>
+                                                )
+                                            }
+                                            return null;
+                                        }}
+                                    />
+                                </Pie>
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+            </div>
+
+            {/* Footer (replicates CardFooter content) */}
+            <div className="flex flex-col gap-2 text-sm pt-4 border-t border-[var(--outline)]">
+                <div className="flex items-center gap-2 leading-none font-medium text-[var(--text-muted)]">
+                    Aggregated data from {TOTAL_STUDENTS} students.
+                    <TrendingUp className="h-4 w-4" /> 
                 </div>
-            )}
+                <Legend
+                    iconType="circle"
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="left"
+                    payload={chartData.map(item => ({
+                        value: item.name, 
+                        type: 'circle', 
+                        color: item.fill 
+                    }))}
+                    formatter={(value) => (
+                        <span className="text-[var(--text-muted)] text-xs" style={{ fontFamily: 'Metropolis, sans-serif' }}>
+                            {value}
+                        </span>
+                    )}
+                />
+            </div>
         </div>
     );
 }

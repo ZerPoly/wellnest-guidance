@@ -3,6 +3,7 @@
 import { useState, FormEvent, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai'; 
 
 const PAGE_TITLE = "Portal Login";
 
@@ -15,17 +16,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // NEW STATE: To toggle password visibility
+  const [showPassword, setShowPassword] = useState(false); 
 
-  // ❌ REMOVED: The logic that automatically redirects authenticated users
-  //             from '/' to '/dashboard' via useEffect.
-  //             The user will now stay on the root page if authenticated.
   /*
-  useEffect(() => {
-    if (status === "authenticated") {
-      const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-      router.push(callbackUrl);
-    }
-  }, [status, router, searchParams]);
+  // Session Redirect Logic (Removed per your instruction)
+  useEffect(() => { ... }, [status, router, searchParams]);
   */
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -141,22 +138,35 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Password Input */}
-          <div>
+          {/* Password Input (MODIFIED) */}
+          <div className="relative">
             <label htmlFor="password" className="block text-sm font-medium text-[var(--text-muted)] mb-1">
               Password
             </label>
             <input
               id="password"
-              type="password"
+              // DYNAMIC TYPE: switch between 'password' and 'text'
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={isSubmitting}
-              className="w-full px-4 py-3 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-[var(--title)] placeholder-[var(--text-muted)] focus:ring-2 focus:ring-[var(--cyan)] focus:border-[var(--cyan)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              // Added pr-10 for button spacing
+              className="w-full px-4 py-3 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-[var(--title)] placeholder-[var(--text-muted)] focus:ring-2 focus:ring-[var(--cyan)] focus:border-[var(--cyan)] transition disabled:opacity-50 disabled:cursor-not-allowed pr-10"
               placeholder="••••••••"
               autoComplete="current-password"
             />
+            {/* Toggle Button */}
+            <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                // FIX: Disable the toggle button when submitting
+                disabled={isSubmitting} 
+                className="absolute inset-y-0 right-0 top-6 mr-3 flex items-center p-2 text-[var(--text-muted)] hover:text-[var(--title)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+                {showPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
+            </button>
           </div>
           
           {/* Submit Button */}
