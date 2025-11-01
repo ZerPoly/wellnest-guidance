@@ -16,6 +16,7 @@ import AgendaModal from '@/components/calendar/AgendaModal'; // Agenda Form Moda
 import AgendaDetailsModal from '@/components/calendar/AgendaDetailsModal'; // View/Edit/Delete
 import DayAgendasModal from '@/components/calendar/DayAgendasModal'; // Full Day View
 import { AgendaData, AgendaForm } from '@/components/types/agenda.types'; // Shared Types
+import Link from 'next/link';
 
 
 // --- Main Client Component: Calendar Page Layout ---
@@ -133,72 +134,49 @@ const CalendarClient = () => {
 
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <>
+      {/* Main Content Area: Renders the Calendar/Agenda components directly */}
+      <div className="mb-4">
+        <div className="flex flex-row space-x-1">
+          <Link href="/dashboard" className="font-extrabold text-[var(--text-muted)] hover:text-[var(--title)] transition-colors">
+            Dashboard
+          </Link>
+          <a className="font-regular text-[var(--text-muted)] ">
+            / Calendar
+          </a>
+        </div>
+        <div>
+          <h1 className="text-3xl font-extrabold text-[var(--title)] hidden sm:block">
+            Scheduling Management
+          </h1>
+        </div>
+      </div>
+
+      {/* Grid Layout: Calendar (2 cols) + Agenda (1 col) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+        {/* Left Side: Calendar (2/3 width) */}
+        <div className="lg:col-span-2">
+          <CalendarComponent
+            agendas={agendas}
+            onDateClick={handleDateClick}
+            onAgendaClick={setSelectedAgenda}
+            onCreateAgenda={handleCreateAgenda}
+            onDayClick={handleDayClick} 
+          />
+        </div>
+        {/* Right Side: Agenda List (1/3 width) */}
+        <div className="lg:col-span-1">
+          <AgendaComponent
+            agendas={agendas}
+            onAgendaClick={setSelectedAgenda}
+            onCreateAgenda={handleCreateAgenda}
+          />
+        </div>
+        {/* space for bottom */}
+        <div className='h-10'></div>
+      </div>
+
       
-      {/* 1. Sidebar Container (Persistent Layout) */}
-      <div 
-        className={`fixed inset-y-0 left-0 z-50 transition-transform duration-300 md:relative md:translate-x-0 ${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <Sidebar
-          isMobileOpen={isMobileMenuOpen}
-          onLinkClick={handleLinkClick} // Closes mobile menu after link click
-        />
-        
-        {/* Mobile Close Button (Inside Sidebar Overlay) */}
-        {isMobileMenuOpen && (
-            <button
-                onClick={toggleMobileMenu}
-                className="absolute top-4 right-4 text-gray-200 p-2 rounded-full hover:bg-zinc-700 md:hidden z-50"
-                aria-label="Close menu"
-            >
-                <AiOutlineClose size={24} />
-            </button>
-        )}
-      </div>
-
-      {/* 2. Main Content Container (Wraps Header and Calendar Content) */}
-      <div className="flex flex-col flex-1 min-w-0">
-        <Header toggleMobileMenu={toggleMobileMenu} />
-        
-        {/* Main Content Area: Renders the Calendar/Agenda components directly */}
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          <div className="space-y-6">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">Schedule Management</h1>
-
-            {/* Grid Layout: Calendar (2 cols) + Agenda (1 col) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-              {/* Left Side: Calendar (2/3 width) */}
-              <div className="lg:col-span-2">
-                <CalendarComponent
-                  agendas={agendas}
-                  onDateClick={handleDateClick}
-                  onAgendaClick={setSelectedAgenda}
-                  onCreateAgenda={handleCreateAgenda}
-                  onDayClick={handleDayClick} 
-                />
-              </div>
-              {/* Right Side: Agenda List (1/3 width) */}
-              <div className="lg:col-span-1">
-                <AgendaComponent
-                  agendas={agendas}
-                  onAgendaClick={setSelectedAgenda}
-                  onCreateAgenda={handleCreateAgenda}
-                />
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-
-      {/* Mobile Overlay Background */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black opacity-50 z-40 md:hidden"
-          onClick={toggleMobileMenu}
-        ></div>
-      )}
 
 
       {/* --- MODAL LAYERS (Always rendered outside the main flow) --- */}
@@ -235,7 +213,7 @@ const CalendarClient = () => {
         onCreateAgenda={handleCreateAgendaFromDay}
       />
 
-    </div>
+    </>
   );
 };
 
