@@ -102,6 +102,7 @@ export async function verifyStudentAccess(
   accessToken: string
 ): Promise<{ success: boolean; message?: string }> {
   try {
+    console.log("🔐 Verifying access for:", studentId);
     const response = await fetch(
       `${API_BASE_URL}/api/v1/users/students/${studentId}`,
       {

@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from "react";
-// Removed PasswordModal import
 import {
   StudentClassification,
   ClassificationType,
   fetchStudents as apiFetchStudents,
-} from "@/lib/api/studentClassification"; 
-// Removed verifyStudentAccess import
+} from "@/lib/api/studentClassification";
+import { verifyStudentAccess } from "@/lib/api/studentClassificationByID";
 import Link from "next/link";
 import { AiOutlineFilter } from 'react-icons/ai';
 import { useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
+import PasswordModal from "@/components/students/PasswordModal";
 
 // --- Helper Functions ---
 const maskEmail = (email: string, revealed: boolean) => {
@@ -44,7 +44,7 @@ const StudentAvatar: React.FC<{ classification: ClassificationType }> = ({ class
   );
 };
 
-// NextAuth Token Retrieval Hook
+// Token Hook
 const useAuthToken = () => {
   const { data: session, status } = useSession();
   const isLoading = status === 'loading';
@@ -54,13 +54,12 @@ const useAuthToken = () => {
   return { token, email, isLoading };
 };
 
-// Main StudentsContent Component
+// --- Main Component ---
 const StudentsContent: React.FC = () => {
   const router = useRouter();
   const { token, email, isLoading: isSessionLoading } = useAuthToken();
   const LIMIT = 20;
 
-  // --- Data and State (Simplified) ---
   const [students, setStudents] = useState<StudentClassification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,51 +71,68 @@ const StudentsContent: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [showFilter, setShowFilter] = useState(false);
 
-  // Modals & Security (Removed password states, only keep revealedStudents)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<StudentClassification | null>(null);
   const [revealedStudents, setRevealedStudents] = useState<string[]>([]);
-  
-  // --- API Data Fetching Logic (List View) ---
-  const fetchStudents = useCallback(async (cursor: string | undefined = undefined, append = false) => {
-    if (isSessionLoading) { return; }
-    if (!token) {
-      setError("Authentication token is missing. Please log in.");
-      setLoading(false);
-      return;
-    }
 
-    if (append) {
-      setIsLoadingMore(true);
-    } else {
-      setLoading(true);
-      setError(null);
-      setStudents([]);
-    }
+  // View Details → opens password modal
+  const handleViewDetails = (student: StudentClassification) => {
+    setSelectedStudent(student);
+    setIsModalOpen(true);
+  };
 
-    const params = {
-      limit: LIMIT,
-      cursor: cursor,
-      classification: statusFilter !== "All" ? (statusFilter as ClassificationType) : undefined,
-    };
+  // When password verified successfully
+  const handlePasswordVerified = (studentId: string) => {
+    setIsModalOpen(false);
+    setRevealedStudents((prev) => [...prev, studentId]);
+    router.push(`/students/${studentId}`);
+  };
 
-    try {
-      const response = await apiFetchStudents(token, params);
-
-      if (response.success && response.data) {
-        setStudents((prev) =>
-          append ? [...prev, ...response.data!.classifications] : response.data!.classifications
-        );
-        setHasMore(response.data.hasMore);
-        setNextCursor(response.data.nextCursor);
-      } else {
-        setError(response.message || "An unknown error occurred while fetching students.");
+  // Fetch students from API
+  const fetchStudents = useCallback(
+    async (cursor: string | undefined = undefined, append = false) => {
+      if (isSessionLoading) return;
+      if (!token) {
+        setError("Authentication token missing. Please log in.");
+        setLoading(false);
+        return;
       }
-    } catch (err: any) {
-      setError(err.message || "A network error occurred.");
-    } finally {
-      setLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [token, statusFilter, isSessionLoading]);
+
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setLoading(true);
+        setError(null);
+        setStudents([]);
+      }
+
+      const params = {
+        limit: LIMIT,
+        cursor: cursor,
+        classification: statusFilter !== "All" ? (statusFilter as ClassificationType) : undefined,
+      };
+
+      try {
+        const response = await apiFetchStudents(token, params);
+
+        if (response.success && response.data) {
+          setStudents((prev) =>
+            append ? [...prev, ...response.data!.classifications] : response.data!.classifications
+          );
+          setHasMore(response.data.hasMore);
+          setNextCursor(response.data.nextCursor);
+        } else {
+          setError(response.message || "Unknown error fetching students.");
+        }
+      } catch (err: any) {
+        setError(err.message || "A network error occurred.");
+      } finally {
+        setLoading(false);
+        setIsLoadingMore(false);
+      }
+    },
+    [token, statusFilter, isSessionLoading]
+  );
 
   useEffect(() => {
     if (!isSessionLoading) {
@@ -130,19 +146,12 @@ const StudentsContent: React.FC = () => {
     }
   };
 
-  // --- Core Logic (Immediate Navigation) ---
-  const handleViewDetails = (studentId: string) => {
-    // Add student to revealed list and navigate directly
-    setRevealedStudents((prev) => [...prev, studentId]);
-    router.push(`/students/${studentId}`);
-  };
-
   const filterOptions = ["All", "Excelling", "Thriving", "Struggling", "InCrisis"];
 
   const filteredStudents = students.filter(
     (student) =>
-      (student.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.department_name.toLowerCase().includes(searchQuery.toLowerCase()))
+      student.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.department_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const renderStatusText = (classification: ClassificationType) => {
@@ -159,7 +168,6 @@ const StudentsContent: React.FC = () => {
   };
 
   // --- RENDER START ---
-
   if (isSessionLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -203,7 +211,7 @@ const StudentsContent: React.FC = () => {
         />
       </div>
 
-      {/* Student Count / Filter Button */}
+      {/* Filter Controls */}
       <div className="flex justify-between items-center">
         <p className="text-gray-600">
           <span className="font-bold text-gray-800">{filteredStudents.length}</span> students displayed
@@ -245,32 +253,25 @@ const StudentsContent: React.FC = () => {
         {filteredStudents.length > 0 ? (
           filteredStudents.map((student) => {
             const revealed = revealedStudents.includes(student.student_id);
-            const profilePath = `/students/${student.student_id}`;
-
             return (
               <div
                 key={student.student_id}
                 className="bg-white shadow-md rounded-2xl p-6 flex flex-col items-center text-center transition-transform hover:scale-105 hover:shadow-lg"
               >
                 <StudentAvatar classification={student.classification} />
-                <p className="font-bold text-lg text-gray-800">
-                  {maskEmail(student.email, revealed)}
-                </p>
+                <p className="font-bold text-lg text-gray-800">{maskEmail(student.email, revealed)}</p>
                 <div className="mt-1 mb-2">{renderStatusText(student.classification)}</div>
-                <p className="text-xs text-gray-500 mb-4 truncate w-full">
-                  {student.department_name}
-                </p>
+                <p className="text-xs text-gray-500 mb-4 truncate w-full">{student.department_name}</p>
 
-                {/* Always show the View button, pointing to the direct handler */}
                 <button
-                    onClick={() => handleViewDetails(student.student_id)}
-                    className={`w-full font-semibold py-3 px-4 rounded-full transition-all shadow ${
-                        revealed 
-                            ? 'bg-[#460F9D] hover:bg-[#5E21D2] text-white' 
-                            : 'bg-[#03BFBF] hover:bg-[#02A4A4] text-white'
-                    }`}
+                  onClick={() => handleViewDetails(student)}
+                  className={`w-full font-semibold py-3 px-4 rounded-full transition-all shadow ${
+                    revealed
+                      ? "bg-[#460F9D] hover:bg-[#5E21D2] text-white"
+                      : "bg-[#03BFBF] hover:bg-[#02A4A4] text-white"
+                  }`}
                 >
-                    View Details
+                  View Details
                 </button>
               </div>
             );
@@ -295,12 +296,22 @@ const StudentsContent: React.FC = () => {
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                 Loading More...
               </span>
-            ) : ('Load More Students')}
+            ) : (
+              'Load More Students'
+            )}
           </button>
         </div>
       )}
 
-      {/* Removed PasswordModal Component */}
+      {/* Password Modal */}
+      <PasswordModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        studentId={selectedStudent?.student_id || null}
+        studentEmail={selectedStudent?.email || null}
+        token={token}
+        onVerified={handlePasswordVerified}
+      />
     </div>
   );
 };
