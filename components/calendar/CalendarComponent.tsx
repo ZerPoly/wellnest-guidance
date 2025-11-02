@@ -39,7 +39,7 @@ export default function CalendarComponent({
   }));
   
   const yearOptions = Array.from({ length: 10 }, (_, i) => {
-    const year = new Date().getFullYear() - 5 + i;
+    const year = new Date().getFullYear() + i;
     return { value: year, label: year.toString() };
   });
 
