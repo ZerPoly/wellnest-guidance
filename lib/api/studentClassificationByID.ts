@@ -1,3 +1,5 @@
+import { StudentProfileResponse } from "@/components/types/studentProfile.type";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_HW_USERS_API || '';
 // Types for API response
 export interface ApiMoodCheckIn {
@@ -92,6 +94,8 @@ export async function fetchStudentClassificationByID(
   }
 }
 
+// ...existing code...
+
 /**
  * Verify credentials without fetching full student data
  * Used for password validation in the modal
@@ -100,7 +104,7 @@ export async function verifyStudentAccess(
   studentId: string,
   credentials: Credentials,
   accessToken: string
-): Promise<{ success: boolean; message?: string }> {
+): Promise<StudentProfileResponse> {
   try {
     console.log("🔐 Verifying access for:", studentId);
     const response = await fetch(
@@ -118,29 +122,59 @@ export async function verifyStudentAccess(
       }
     );
 
-    const result: ApiResponse = await response.json();
+    const result: StudentProfileResponse = await response.json();
 
-    if (response.ok && result.success) {
-      return { success: true };
+    if (response.ok && result.success && result.data) {
+      return { 
+        success: true, 
+        code: result.code,
+        message: result.message,
+        data: result.data 
+      };
     }
 
     // Return specific error messages
     if (result.code === 'INVALID_CREDENTIALS') {
-      return { success: false, message: 'Invalid password. Please try again.' };
+      return { 
+        success: false, 
+        code: result.code,
+        message: 'Invalid password. Please try again.', 
+        data: undefined
+      };
     }
 
     if (result.code === 'FORBIDDEN_ACCESS') {
-      return { success: false, message: 'You do not have permission to access this student.' };
+      return { 
+        success: false, 
+        code: result.code,
+        message: 'You do not have permission to access this student.', 
+        data: undefined
+      };
     }
 
     if (result.code === 'STUDENT_NOT_FOUND') {
-      return { success: false, message: 'Student not found.' };
+      return { 
+        success: false, 
+        code: result.code,
+        message: 'Student not found.', 
+        data: undefined
+      };
     }
 
-    return { success: false, message: result.message || 'Verification failed.' };
+    return { 
+      success: false, 
+      code: result.code || 'UNKNOWN_ERROR',
+      message: result.message || 'Verification failed.', 
+      data: undefined
+    };
 
   } catch (error) {
     console.error('Network error:', error);
-    return { success: false, message: 'Network error. Please try again.' };
+    return { 
+      success: false, 
+      code: 'NETWORK_ERROR',
+      message: 'Network error. Please try again.',
+      data: undefined 
+    };
   }
 }

@@ -166,9 +166,6 @@ export default function StudentProfileClient({
     const loadStudentProfile = async () => {
       const accessToken = session?.user?.accessToken;
       const userEmail = session?.user?.email;
-      console.log(userEmail);
-
-      const DUMMY_PASSWORD = "VerifiedByToken!";
 
       if (!userEmail || !accessToken) {
         setError("Authentication error: User session expired or missing data.");
@@ -176,27 +173,51 @@ export default function StudentProfileClient({
         return;
       }
 
-      try {
-        const apiData = await fetchStudentClassificationByID(
-          studentId,
-          { email: userEmail, password: DUMMY_PASSWORD },
-          accessToken
-        );
+      // Check if data already exists from verification
+      const cachedData = sessionStorage.getItem(`student_${studentId}`);
 
-        if (apiData) {
+      if (cachedData) {
+        try {
+          console.log("✅ Using cached student data from verification");
+          const apiData = JSON.parse(cachedData);
           const mappedProfile = mapApiDataToProfile(apiData);
           setProfile(mappedProfile);
-        } else {
-          setError(
-            "Failed to load profile: Insufficient permissions or data error."
-          );
+          setLoading(false);
+
+          return;
+        } catch (e) {
+          setError("An unexpected error occurred while loading the profile.");
+        } finally {
+          setLoading(false);
         }
-      } catch (err: any) {
-        console.error("❌ Profile fetch error:", err);
-        setError("An unexpected error occurred while loading the profile.");
-      } finally {
-        setLoading(false);
       }
+
+      // No cached data - redirect back to students page
+      console.log("⚠️ No cached data found, redirecting back to students page");
+      router.push("/students");
+
+      // Old code na need ng isa pang fetch
+      // try {
+      //   const apiData = await fetchStudentClassificationByID(
+      //     studentId,
+      //     { email: userEmail, password: DUMMY_PASSWORD },
+      //     accessToken
+      //   );
+
+      //   if (apiData) {
+      //     const mappedProfile = mapApiDataToProfile(apiData);
+      //     setProfile(mappedProfile);
+      //   } else {
+      //     setError(
+      //       "Failed to load profile: Insufficient permissions or data error."
+      //     );
+      //   }
+      // } catch (err: any) {
+      //   console.error("❌ Profile fetch error:", err);
+      //   setError("An unexpected error occurred while loading the profile.");
+      // } finally {
+      //   setLoading(false);
+      // }
     };
 
     if (status === "authenticated") loadStudentProfile();

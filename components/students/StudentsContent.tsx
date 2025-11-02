@@ -12,6 +12,7 @@ import { AiOutlineFilter } from "react-icons/ai";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PasswordModal from "@/components/students/PasswordModal";
+import { StudentProfileData } from "../types/studentProfile.type";
 
 // --- Helper Functions ---
 const maskEmail = (email: string, revealed: boolean) => {
@@ -92,10 +93,20 @@ const StudentsContent: React.FC = () => {
   };
 
   // When password verified successfully
-  const handlePasswordVerified = (studentId: string) => {
+  const handlePasswordVerified = (
+    studentId: string,
+    result: StudentProfileData | undefined
+  ) => {
     setIsModalOpen(false);
     setRevealedStudents((prev) => [...prev, studentId]);
-    router.push(`/students/${studentId}`);
+
+    if (result) {
+      // Clear first
+      sessionStorage.removeItem(`student_${studentId}`);
+
+      sessionStorage.setItem(`student_${studentId}`, JSON.stringify(result));
+      router.push(`/students/${studentId}`);
+    }
   };
 
   // Fetch students from API
@@ -352,7 +363,7 @@ const StudentsContent: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         studentId={selectedStudent?.student_id || null}
-        studentEmail={email || null}
+        studentEmail={email}
         token={token}
         onVerified={handlePasswordVerified}
       />
