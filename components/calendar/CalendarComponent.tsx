@@ -112,17 +112,43 @@ export default function CalendarComponent({
     const dayAgendas = getAgendasForDate(day);
     const today = isToday(day);
 
+    // --- FIX: Check if date is less than 7 days from now ---
+    const currentDateObj = new Date(selectedYear, selectedMonth, day);
+    currentDateObj.setHours(0, 0, 0, 0); // Normalize to start of day
+
+    const minDateCheck = new Date();
+    minDateCheck.setHours(0, 0, 0, 0); // Start of today
+    minDateCheck.setDate(minDateCheck.getDate() + 7); // Set to 7 days from now
+
+    // Date is disabled if it's before the minimum check date
+    const isDateDisabled = currentDateObj < minDateCheck;
+    // --- END FIX ---
+
     days.push(
       <div
         key={day}
-        className={`aspect-square border border-gray-200 p-2 cursor-pointer hover:bg-purple-50 transition ${
+        // FIX: Update styling and onClick for disabled dates
+        className={`aspect-square border border-gray-200 p-2 transition ${
           today ? 'bg-purple-100 border-purple-400' : 'bg-white'
+        } ${
+          isDateDisabled 
+            ? 'bg-gray-50 text-gray-400 cursor-not-allowed' 
+            : 'cursor-pointer hover:bg-purple-50'
         }`}
-        onClick={(e) => handleDayClick(day, e)}
+        onClick={(e) => {
+          // FIX: Only fire click handler if the date is not disabled
+          if (!isDateDisabled) {
+            handleDayClick(day, e);
+          }
+        }}
       >
-        <div className={`text-sm font-semibold mb-1 ${today ? 'text-purple-700' : 'text-gray-700'}`}>
+        <div className={`text-sm font-semibold mb-1 ${
+          today ? 'text-purple-700' : (isDateDisabled ? 'text-gray-400' : 'text-gray-700')
+        }`}>
           {day}
         </div>
+        
+        {/* We still show agendas, even on disabled (past) dates */}
         <div className="space-y-1">
           {dayAgendas.slice(0, 2).map((agenda) => {
             const colors = agendaColors[agenda.type] || agendaColors['Meeting'];
@@ -133,7 +159,9 @@ export default function CalendarComponent({
                   e.stopPropagation(); 
                   onAgendaClick(agenda); 
                 }}
-                className={`text-xs px-2 py-1 rounded ${colors.bg} ${colors.border} border truncate hover:shadow-sm transition cursor-pointer`}
+                className={`text-xs px-2 py-1 rounded ${colors.bg} ${colors.border} border truncate hover:shadow-sm transition cursor-pointer ${
+                  isDateDisabled ? 'opacity-60' : '' // Make past agendas slightly transparent
+                }`}
               >
                 <div className={`font-medium ${colors.text}`}>
                   {agenda.title}
