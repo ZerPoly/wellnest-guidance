@@ -177,11 +177,15 @@ const StudentsContent: React.FC = () => {
 
   const renderStatusText = (classification: ClassificationType) => {
     const color =
-      classification === "Excelling" || classification === "Thriving"
-        ? "text-green-600"
-        : classification === "Struggling" || classification === "InCrisis"
-        ? "text-red-600"
-        : "text-gray-600";
+  classification === "Excelling"
+    ? "text-green-600"
+  : classification === "Thriving"
+    ? "text-amber-500"
+  : classification === "Struggling"
+    ? "text-blue-600"
+  : classification === "InCrisis"
+    ? "text-red-600"
+  : "text-gray-600"
 
     const displayText =
       classification === "InCrisis" ? "In-Crisis" : classification;
@@ -348,7 +352,7 @@ const StudentsContent: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         studentId={selectedStudent?.student_id || null}
-        studentEmail={selectedStudent?.email || null}
+        studentEmail={email || null}
         token={token}
         onVerified={handlePasswordVerified}
       />

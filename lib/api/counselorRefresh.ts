@@ -11,7 +11,6 @@ export interface RefreshPayload {
 export interface RefreshResponseData {
     access_token: string;
     refresh_token: string;
-    // Assuming the backend also sends expiration times, but we will rely on decoding for now.
 }
 
 export interface RefreshResponse {
@@ -23,25 +22,15 @@ export interface RefreshResponse {
 
 // --- Main Refresh Function ---
 
-/**
- * Communicates with the backend to rotate the counselor's refresh token
- * and issue a new access token.
- * * @param userId - The user's unique ID.
- * @param refreshToken - The currently held refresh token.
- * @returns A promise resolving to RefreshResponse containing new tokens or an error.
- */
 export async function refreshCounselorToken(
     userId: string,
     refreshToken: string
 ): Promise<RefreshResponse> {
     try {
         if (!API_BASE_URL) {
-            console.error('❌ NEXT_PUBLIC_HW_USERS_API is not set.');
-            return {
-                success: false,
-                code: 'CONFIG_ERROR',
-                message: 'API base URL is not configured.',
-            };
+            // FIX: Corrected typo in console log
+            console.error('❌ NEXT_PUBLIC_HW_AUTH_API is not set.'); 
+            throw new Error('API base URL is not configured.');
         }
 
         const url = `${API_BASE_URL.replace(/\/$/, '')}${ENDPOINT_PATH}`;
@@ -61,47 +50,37 @@ export async function refreshCounselorToken(
             cache: 'no-store',
         });
 
-        const errorText = await response.text();
+        // Use response.text() to safely read the body once
+        const responseBody = await response.text();
 
         if (!response.ok) {
-            console.error('🔴 Token Refresh API HTTP Error:', response.status, errorText);
-
+            console.error('🔴 Token Refresh API HTTP Error:', response.status, responseBody);
+            let errorMsg = `Token refresh failed with status ${response.status}.`;
             try {
-                const data = JSON.parse(errorText);
-                return {
-                    success: false,
-                    code: data.code || 'HTTP_ERROR',
-                    message: data.message || `Token refresh failed with status ${response.status}.`,
-                };
-            } catch {
-                return {
-                    success: false,
-                    code: 'PARSE_ERROR',
-                    message: `Token refresh failed. Server returned status ${response.status}.`,
-                };
+                const errorJson = JSON.parse(responseBody);
+                errorMsg = errorJson.message || errorMsg;
+            } catch (e) {
+                // Body was not JSON, stick with default message
             }
+            // THROW error to be caught by NextAuth
+            throw new Error(errorMsg); 
         }
 
         // Handle successful 200 response
-        const data: RefreshResponse = JSON.parse(errorText);
+        const data: RefreshResponse = JSON.parse(responseBody);
 
-        if (data.success) {
+        if (data.success && data.data) {
             return data;
         } else {
-             // Handle cases where status is 200 but body reports failure (e.g., INVALID_REFRESH_TOKEN)
-            return {
-                success: false,
-                code: data.code || 'REFRESH_FAILURE',
-                message: data.message || 'Token refresh failed.',
-            };
+            // Handle 200 OK but refresh failure (e.g., invalid token)
+            console.error('🔴 Token Refresh Logic Error:', data.message);
+            // THROW error to be caught by NextAuth
+            throw new Error(data.message || 'Token refresh failed.');
         }
 
     } catch (error: any) {
         console.error('❌ Network Error during token refresh:', error);
-        return {
-            success: false,
-            code: 'NETWORK_ERROR',
-            message: `Network error: ${error.message}`,
-        };
+        // Re-throw the error so NextAuth knows the refresh failed
+        throw new Error(error.message || 'Network error during token refresh.');
     }
 }
