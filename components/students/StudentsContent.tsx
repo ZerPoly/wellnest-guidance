@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
@@ -8,8 +8,8 @@ import {
 } from "@/lib/api/studentClassification";
 import { verifyStudentAccess } from "@/lib/api/studentClassificationByID";
 import Link from "next/link";
-import { AiOutlineFilter } from 'react-icons/ai';
-import { useRouter } from 'next/navigation';
+import { AiOutlineFilter } from "react-icons/ai";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PasswordModal from "@/components/students/PasswordModal";
 
@@ -32,14 +32,23 @@ const maskEmail = (email: string, revealed: boolean) => {
 };
 
 // Avatar Component
-const StudentAvatar: React.FC<{ classification: ClassificationType }> = ({ classification }) => {
-  const isFlagged = classification === "InCrisis" || classification === "Struggling";
+const StudentAvatar: React.FC<{ classification: ClassificationType }> = ({
+  classification,
+}) => {
+  const isFlagged =
+    classification === "InCrisis" || classification === "Struggling";
   const bgColor = isFlagged ? "bg-[#460F9D]" : "bg-[#03BFBF]";
   const iconColor = isFlagged ? "text-orange-100" : "text-teal-100";
 
   return (
-    <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-inner ${bgColor}`}>
-      <img src="/img/student.png" alt="Student Icon" className={`w-full h-full object-cover rounded-full ${iconColor}`} />
+    <div
+      className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-inner ${bgColor}`}
+    >
+      <img
+        src="/img/student.png"
+        alt="Student Icon"
+        className={`w-full h-full object-cover rounded-full ${iconColor}`}
+      />
     </div>
   );
 };
@@ -47,7 +56,7 @@ const StudentAvatar: React.FC<{ classification: ClassificationType }> = ({ class
 // Token Hook
 const useAuthToken = () => {
   const { data: session, status } = useSession();
-  const isLoading = status === 'loading';
+  const isLoading = status === "loading";
   const token = session?.user?.accessToken ?? null;
   const email = session?.user?.email ?? null;
 
@@ -72,7 +81,8 @@ const StudentsContent: React.FC = () => {
   const [showFilter, setShowFilter] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<StudentClassification | null>(null);
+  const [selectedStudent, setSelectedStudent] =
+    useState<StudentClassification | null>(null);
   const [revealedStudents, setRevealedStudents] = useState<string[]>([]);
 
   // View Details → opens password modal
@@ -109,7 +119,10 @@ const StudentsContent: React.FC = () => {
       const params = {
         limit: LIMIT,
         cursor: cursor,
-        classification: statusFilter !== "All" ? (statusFilter as ClassificationType) : undefined,
+        classification:
+          statusFilter !== "All"
+            ? (statusFilter as ClassificationType)
+            : undefined,
       };
 
       try {
@@ -117,7 +130,9 @@ const StudentsContent: React.FC = () => {
 
         if (response.success && response.data) {
           setStudents((prev) =>
-            append ? [...prev, ...response.data!.classifications] : response.data!.classifications
+            append
+              ? [...prev, ...response.data!.classifications]
+              : response.data!.classifications
           );
           setHasMore(response.data.hasMore);
           setNextCursor(response.data.nextCursor);
@@ -146,7 +161,13 @@ const StudentsContent: React.FC = () => {
     }
   };
 
-  const filterOptions = ["All", "Excelling", "Thriving", "Struggling", "InCrisis"];
+  const filterOptions = [
+    "All",
+    "Excelling",
+    "Thriving",
+    "Struggling",
+    "InCrisis",
+  ];
 
   const filteredStudents = students.filter(
     (student) =>
@@ -159,12 +180,17 @@ const StudentsContent: React.FC = () => {
       classification === "Excelling" || classification === "Thriving"
         ? "text-green-600"
         : classification === "Struggling" || classification === "InCrisis"
-          ? "text-red-600"
-          : "text-gray-600";
+        ? "text-red-600"
+        : "text-gray-600";
 
-    const displayText = classification === "InCrisis" ? "In-Crisis" : classification;
+    const displayText =
+      classification === "InCrisis" ? "In-Crisis" : classification;
 
-    return <span className={`${color} font-semibold font-metropolis`}>{displayText}</span>;
+    return (
+      <span className={`${color} font-semibold font-metropolis`}>
+        {displayText}
+      </span>
+    );
   };
 
   // --- RENDER START ---
@@ -191,7 +217,10 @@ const StudentsContent: React.FC = () => {
       <div className="p-8 bg-red-100 border-l-4 border-red-500 text-red-700">
         <p className="font-bold">Data Error</p>
         <p>{error}</p>
-        <button onClick={() => fetchStudents(undefined, false)} className="mt-2 text-sm text-red-500 hover:text-red-800">
+        <button
+          onClick={() => fetchStudents(undefined, false)}
+          className="mt-2 text-sm text-red-500 hover:text-red-800"
+        >
           Try Again
         </button>
       </div>
@@ -214,7 +243,10 @@ const StudentsContent: React.FC = () => {
       {/* Filter Controls */}
       <div className="flex justify-between items-center">
         <p className="text-gray-600">
-          <span className="font-bold text-gray-800">{filteredStudents.length}</span> students displayed
+          <span className="font-bold text-gray-800">
+            {filteredStudents.length}
+          </span>{" "}
+          students displayed
         </p>
         <div className="relative">
           <button
@@ -224,7 +256,9 @@ const StudentsContent: React.FC = () => {
             }`}
           >
             <AiOutlineFilter className="w-4 h-4" />
-            <span>Filter: {statusFilter === "InCrisis" ? "In-Crisis" : statusFilter}</span>
+            <span>
+              Filter: {statusFilter === "InCrisis" ? "In-Crisis" : statusFilter}
+            </span>
           </button>
           {showFilter && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-10">
@@ -259,9 +293,15 @@ const StudentsContent: React.FC = () => {
                 className="bg-white shadow-md rounded-2xl p-6 flex flex-col items-center text-center transition-transform hover:scale-105 hover:shadow-lg"
               >
                 <StudentAvatar classification={student.classification} />
-                <p className="font-bold text-lg text-gray-800">{maskEmail(student.email, revealed)}</p>
-                <div className="mt-1 mb-2">{renderStatusText(student.classification)}</div>
-                <p className="text-xs text-gray-500 mb-4 truncate w-full">{student.department_name}</p>
+                <p className="font-bold text-lg text-gray-800">
+                  {maskEmail(student.email, revealed)}
+                </p>
+                <div className="mt-1 mb-2">
+                  {renderStatusText(student.classification)}
+                </div>
+                <p className="text-xs text-gray-500 mb-4 truncate w-full">
+                  {student.department_name}
+                </p>
 
                 <button
                   onClick={() => handleViewDetails(student)}
@@ -297,7 +337,7 @@ const StudentsContent: React.FC = () => {
                 Loading More...
               </span>
             ) : (
-              'Load More Students'
+              "Load More Students"
             )}
           </button>
         </div>
