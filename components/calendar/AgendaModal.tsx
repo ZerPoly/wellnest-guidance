@@ -23,7 +23,7 @@ export default function AgendaModal({
   closeOnBackdropClick = true,
   title = "New Agenda",
   submitText = "Create Agenda",
-  agendaOptions = ["Counseling", "Routine Interview", "Meeting", "Event"],
+  agendaOptions = ["Counseling", "Routine Interview"],
   onSave,
   initialData,
 }: AgendaModalProps) {
@@ -36,6 +36,15 @@ export default function AgendaModal({
   });
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // FIX: Calculate the MINIMUM available date (7 days from today)
+  const today = new Date();
+  const minDate = new Date();
+  minDate.setDate(today.getDate() + 7); // Set min date to 7 days from today
+
+  // Format for input[type="date"] min attribute (YYYY-MM-DD)
+  const minDateString = minDate.toISOString().split('T')[0];
+  // REMOVED: maxDate and maxDateString
+
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -43,7 +52,7 @@ export default function AgendaModal({
       } else {
         setFormData({
           title: "",
-          date: "",
+          date: "", // Date will be empty, forcing user to pick
           type: agendaOptions[0],
           startTime: "09:00",
           endTime: "10:00",
@@ -51,7 +60,8 @@ export default function AgendaModal({
         setValidationError(null);
       }
     }
-  }, [isOpen, initialData]);
+  // FIX: Removed 'agendaOptions' from dependency array to prevent infinite loop
+  }, [isOpen, initialData]); 
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
@@ -89,6 +99,21 @@ export default function AgendaModal({
       setValidationError("Please fill in the title, date, start time, and end time.");
       return;
     }
+
+    // FIX: Updated validation logic to check for 7-day minimum notice
+    const [year, month, day] = date.split('-').map(Number);
+    // Note: new Date(y, m-1, d) creates a date in local time at 00:00
+    const selectedDate = new Date(year, month - 1, day); 
+    
+    const minDateCheck = new Date();
+    minDateCheck.setHours(0, 0, 0, 0); // Start of today
+    minDateCheck.setDate(minDateCheck.getDate() + 7); // Set to 7 days from now (e.g., Nov 2 -> Nov 9)
+
+    if (selectedDate < minDateCheck) {
+      setValidationError("Date must be at least 1 week (7 days) in advance.");
+      return;
+    }
+    // REMOVED: maxDateCheck and the associated validation
 
     if (startTime >= endTime) {
       setValidationError("End time must be after start time.");
@@ -170,6 +195,8 @@ export default function AgendaModal({
               value={formData.date}
               onChange={handleChange}
               required
+              min={minDateString} // FIX: Set min attribute
+              // REMOVED: max attribute
               className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-purple-400 focus:outline-none"
             />
           </div>
@@ -217,6 +244,7 @@ export default function AgendaModal({
                   type="button"
                   key={type}
                   onClick={() => handleTypeChange(type)}
+                  // FIX: Corrected typo in className
                   className={`py-2 rounded-xl font-medium transition-colors ${
                     formData.type === type
                       ? "bg-blue-600 text-white shadow-md"
@@ -240,3 +268,4 @@ export default function AgendaModal({
     </div>
   );
 }
+

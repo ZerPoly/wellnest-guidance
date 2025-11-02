@@ -147,7 +147,7 @@ const CalendarClient = () => {
         </div>
         <div>
           <h1 className="text-3xl font-extrabold text-[var(--title)] hidden sm:block">
-            Scheduling Management
+            Consultations Management
           </h1>
         </div>
       </div>

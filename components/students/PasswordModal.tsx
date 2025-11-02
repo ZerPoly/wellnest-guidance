@@ -84,7 +84,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-[#03BFBF] outline-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-[var(--title)] outline-none"
               required
             />
             <button
@@ -115,7 +115,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
             <button
               type="submit"
               disabled={isVerifying}
-              className="px-5 py-2 rounded-lg bg-[#03BFBF] hover:bg-[#02A4A4] text-white font-semibold disabled:opacity-60"
+              className="px-5 py-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white font-semibold disabled:opacity-60"
             >
               {isVerifying ? "Verifying..." : "Confirm"}
             </button>
