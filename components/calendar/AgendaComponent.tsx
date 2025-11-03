@@ -25,6 +25,34 @@ const getStatusBadge = (status: string) => {
     }
 };
 
+const getCounselorStatusBadge = (agenda: AgendaData) => {
+  const { status, created_by, student_response } = agenda;
+
+  if (status === 'confirmed') {
+    return { label: 'Confirmed', className: 'bg-green-200 text-green-800' };
+  }
+  
+  if (status === 'declined') {
+    // Check *who* declined it
+    if (student_response === 'declined') {
+      return { label: 'Declined by Student', className: 'bg-red-200 text-red-800' };
+    }
+    return { label: 'Declined by You', className: 'bg-red-200 text-red-800' };
+  }
+
+  if (status === 'pending') {
+    // Check *who* it is pending on
+    if (created_by === 'counselor') {
+      return { label: 'Pending Student', className: 'bg-yellow-200 text-yellow-800' };
+    }
+    // If created_by === 'student'
+    return { label: 'Pending Your Reply', className: 'bg-yellow-200 text-yellow-800' };
+  }
+
+  // Fallback
+  return { label: 'Scheduled', className: 'bg-gray-200 text-gray-800' };
+};
+
 export default function AgendaComponent({ 
     agendas, 
     onAgendaClick, 
@@ -155,7 +183,7 @@ export default function AgendaComponent({
                                 <div className="space-y-3 mb-6">
                                     {agendasByDate[date].map((agenda) => {
                                         const colors = agendaColors[agenda.type] || agendaColors['Default'];
-                                        const statusBadge = getStatusBadge(agenda.status);
+                                        const statusBadge = getCounselorStatusBadge(agenda);
                                         
                                         return (
                                             <div
@@ -190,7 +218,7 @@ export default function AgendaComponent({
                     // Show agendas without date labels
                     filteredAgendas.map((agenda) => {
                         const colors = agendaColors[agenda.type] || agendaColors['Default'];
-                        const statusBadge = getStatusBadge(agenda.status);
+                        const statusBadge = getCounselorStatusBadge(agenda);
 
                         return (
                             <div

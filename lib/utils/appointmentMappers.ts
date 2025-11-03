@@ -56,10 +56,10 @@ export function appointmentToAgenda(
     student_id: appointment.student_id,
     student_name: student?.email || 'Unknown Student',
     
-    // This is less critical for confirmed items, but good to have
-    // We'd need to fetch the original request to know 'created_by' for sure,
-    // so we'll default it. The 'pending' items are more important.
     created_by: 'student', 
+
+    student_response: 'accepted',
+    counselor_response: 'accepted',
   };
 }
 
@@ -88,6 +88,9 @@ export function requestToAgenda(
     student_id: request.student_id,
     student_name: student?.email || 'Unknown Student',
     created_by: request.created_by, 
+
+    student_response: request.student_response,
+    counselor_response: request.counselor_response,
   };
 }
 

@@ -27,25 +27,13 @@ export interface AgendaData {
   student_id?: string;
   student_name?: string; // For display in agenda/calendar
   
-  /** * Tracks who *created* the request. This is critical for 
-   * the AgendaDetailsModal to decide if it should show
-   * "Accept/Decline" (if created_by: 'student') or
-   * "Delete" (if created_by: 'counselor').
-   */
+  
   created_by: 'student' | 'counselor'; 
+  student_response: 'pending' | 'accepted' | 'declined';
+  counselor_response: 'pending' | 'accepted' | 'declined';
 }
 
-/**
- * ⬆️ NOTE: The 'AgendaForm' type was removed to avoid confusion.
- * The CounselorAgendaModal.tsx file now defines its own
- * 'CounselorAgendaForm' interface, which is more specific
- * for the create/edit form.
- */
 
-
-/**
- * Your updated color definitions.
- */
 export const agendaColors: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   'Counseling': { 
     bg: 'bg-blue-50', 
