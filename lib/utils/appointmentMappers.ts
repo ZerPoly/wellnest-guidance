@@ -86,7 +86,7 @@ export function requestToAgenda(
     
     // Add student info and CRITICAL created_by field
     student_id: request.student_id,
-    student_name: student?.user_name || 'Unknown Student',
+    student_name: student?.email || 'Unknown Student',
     created_by: request.created_by, 
   };
 }

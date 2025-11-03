@@ -3,12 +3,13 @@ import { ApiResponse } from './types';
 const API_BASE_URL = process.env.NEXT_PUBLIC_HW_USERS_API;
 
 export interface Student {
-  user_id: string;
-  user_name: string;
+  classification_id: string;
+  student_id: string;
+  classification: string;
+  is_flagged: boolean;
+  classified_at: string;
   email: string;
-  department_id: string;
   department_name: string;
-  classification?: string;
 }
 
 export interface StudentsListResponse {

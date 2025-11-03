@@ -204,8 +204,8 @@ export default function CounselorAgendaModal({
               >
                 <option value="">-- Choose a student --</option>
                 {filteredStudents.map((student) => (
-                  <option key={student.user_id} value={student.user_id}>
-                    {student.user_name} ({student.email})
+                  <option key={student.student_id} value={student.student_id}>
+                    {student.email} {/* Show email, not user_name */}
                   </option>
                 ))}
               </select>

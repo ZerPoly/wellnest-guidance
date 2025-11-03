@@ -5,24 +5,31 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 
-// ... (all your component imports)
+// --- UI Components ---
 import CalendarComponent from '@/components/calendar/CalendarComponent';
 import AgendaComponent from '@/components/calendar/AgendaComponent';
 import CounselorAgendaModal from '@/components/calendar/CounselorAgendaModal';
-import AgendaDetailsModal from '@/components/calendar/AgendaDetailsModal'; // Corrected modal
+import AgendaDetailsModal from '@/components/calendar/AgendaDetailsModal';
+import DayAgendasModal from '@/components/calendar/DayAgendasModal'; 
 import { AgendaData } from '@/components/types/agenda.types';
 
-// ... (all your API client imports)
-import { getCounselorConfirmedAppointments } from '@/lib/api/appointments/counselorAppointments';
+// --- API Client ---
+import {
+  getCounselorConfirmedAppointments,
+} from '@/lib/api/appointments/counselorAppointments';
 import {
   getCounselorAppointmentRequests,
   acceptCounselorAppointmentRequest,
   declineCounselorAppointmentRequest,
   createCounselorAppointmentRequest,
 } from '@/lib/api/appointments/counselorRequests';
-import { getDepartmentStudents, Student, StudentsListResponse } from '@/lib/api/appointments/students';
+import {
+  getDepartmentStudents,
+  Student,
+  StudentsListResponse,
+} from '@/lib/api/appointments/students';
 
-// ... (all your mapper imports)
+// --- Mappers ---
 import {
   appointmentToAgenda,
   requestToAgenda,
@@ -33,20 +40,27 @@ import {
 export default function CounselorAppointmentsPage() {
   const { data: session } = useSession();
   
+  // --- Data State ---
   const [allAgendas, setAllAgendas] = useState<AgendaData[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [studentMap, setStudentMap] = useState<Map<string, Student>>(new Map());
   
+  // --- Page State ---
   const [isLoading, setIsLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
+  // --- Modal States ---
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [isDayModalOpen, setDayModalOpen] = useState(false);
+  
   const [selectedAgenda, setSelectedAgenda] = useState<AgendaData | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<string | null>(null);
+  const [selectedDayAgendas, setSelectedDayAgendas] = useState<AgendaData[]>([]);
+  const [selectedDayDate, setSelectedDayDate] = useState<string>("");
 
-  // 1. Fetch Students (with pagination)
+  // 1. Fetch Students (with pagination and safety checks)
   useEffect(() => {
     if (session?.user?.accessToken) {
       const fetchAllStudents = async () => {
@@ -58,6 +72,7 @@ export default function CounselorAppointmentsPage() {
         try {
           while (hasMore) {
             const res: any = await getDepartmentStudents(token, cursor, 50);
+
             if (res.success && res.data) {
               const pageData = res.data as StudentsListResponse;
               allStudents = [...allStudents, ...pageData.classifications];
@@ -72,15 +87,24 @@ export default function CounselorAppointmentsPage() {
           setStudents(allStudents);
 
           const newMap = new Map<string, Student>();
-          allStudents.forEach(s => newMap.set(s.user_id, s));
-          
-          // ⬇️ --- DEBUGGING FOR "UNKNOWN STUDENT" --- ⬇️
-          console.log(`[StudentMap] Finished building map with ${newMap.size} students.`);
-          // Log the first 5 student keys to check their format
-          console.log('[StudentMap] First 5 keys:', Array.from(newMap.keys()).slice(0, 5));
-          // ⬆️ --- END DEBUGGING --- ⬆️
+          let badStudentDataCount = 0;
 
-          setStudentMap(newMap); // This triggers the second useEffect
+          allStudents.forEach(s => {
+            if (s && s.student_id) {
+              newMap.set(s.student_id, s); 
+            } else {
+              console.warn('[StudentMap] Ignoring bad student data:', s);
+              badStudentDataCount++;
+            }
+          });
+          
+          console.log(`[StudentMap] Finished building map with ${newMap.size} valid students.`);
+          if (badStudentDataCount > 0) {
+            console.error(`[StudentMap] Ignored ${badStudentDataCount} students with missing user_id.`);
+          }
+          console.log('[StudentMap] First 5 keys:', Array.from(newMap.keys()).slice(0, 5));
+
+          setStudentMap(newMap);
 
         } catch (error) {
           console.error(error);
@@ -91,9 +115,9 @@ export default function CounselorAppointmentsPage() {
     }
   }, [session]);
 
-  // 2. Fetch Appointments & Requests
+  // 2. Fetch Appointments & Requests (Depends on studentMap)
   const fetchData = async () => {
-    // This check is CRUCIAL. It prevents running before the map is ready.
+    // Wait for session AND studentMap to be ready
     if (!session?.user?.accessToken || studentMap.size === 0) {
       console.log('[fetchData] Skipping, session or studentMap not ready.');
       return;
@@ -110,14 +134,9 @@ export default function CounselorAppointmentsPage() {
         getCounselorAppointmentRequests(token, 'pending'),
       ]);
 
-      // ⬇️ --- DEBUGGING FOR "UNKNOWN STUDENT" --- ⬇️
-      if (appointmentsRes.data && appointmentsRes.data.length > 0) {
-        console.log('[fetchData] First appointment student_id:', appointmentsRes.data[0].student_id);
-      }
       if (requestsRes.data && requestsRes.data.length > 0) {
         console.log('[fetchData] First request student_id:', requestsRes.data[0].student_id);
       }
-      // ⬆️ --- END DEBUGGING --- ⬆️
 
       const confirmed = (appointmentsRes.data || []).map(app => 
         appointmentToAgenda(app, studentMap)
@@ -139,31 +158,87 @@ export default function CounselorAppointmentsPage() {
   // Re-fetch data when session, studentMap, or month/year changes
   useEffect(() => {
     fetchData();
-  }, [session, currentMonth, currentYear, studentMap]); // studentMap is a dependency
+  }, [session, currentMonth, currentYear, studentMap]);
 
-  // ... (Modal open/close handlers: handleCreateAgenda, handleDateClick, handleAgendaClick, etc.)
-  const handleCreateAgenda = () => { /* ... */ };
-  const handleDateClick = (date: string) => { /* ... */ };
+  // --- Modal Open/Close Handlers ---
+
+  const handleCreateAgenda = () => {
+    console.log('[page.tsx] handleCreateAgenda: Opening create modal...');
+    setPrefilledDate(null);
+    setCreateModalOpen(true);
+  };
+  
+  const handleCreateAgendaForDay = () => {
+    console.log('[page.tsx] handleCreateAgendaForDay: Opening create modal...');
+    setPrefilledDate(selectedDayDate); // Use the date from the day modal
+    setCreateModalOpen(true);
+    setDayModalOpen(false); // Close the day modal
+  };
+
+  const handleDateClick = (date: string) => {
+    console.log('[page.tsx] handleDateClick: Opening create modal with date:', date);
+    setPrefilledDate(date);
+    setCreateModalOpen(true);
+  };
+
   const handleAgendaClick = (agenda: AgendaData) => {
+    console.log('[page.tsx] handleAgendaClick: Opening details modal for:', agenda.id);
     setSelectedAgenda(agenda);
     setDetailsModalOpen(true);
+    setDayModalOpen(false); // Close the day modal if it was open
   };
-  const handleDayClick = (date: string, agendas: AgendaData[]) => { /* ... */ };
+  
+  const handleDayClick = (date: string, agendas: AgendaData[]) => {
+    console.log(`[page.tsx] handleDayClick: Clicked on date: ${date}, found ${agendas.length} agendas.`);
+    if (agendas.length > 0) {
+      // If items exist, open the DayAgendasModal
+      setSelectedDayDate(date);
+      setSelectedDayAgendas(agendas);
+      setDayModalOpen(true);
+    } else {
+      // If day is empty, open the create modal
+      handleDateClick(date);
+    }
+  };
+
   const closeModal = () => {
+    console.log('[page.tsx] closeModal: Closing all modals.');
     setCreateModalOpen(false);
     setDetailsModalOpen(false);
+    setDayModalOpen(false);
+    
     setSelectedAgenda(null);
     setPrefilledDate(null);
+    setSelectedDayAgendas([]);
+    setSelectedDayDate("");
   };
 
   // --- API Action Handlers ---
 
   const handleSave = async (formData: any) => {
-    // ... (This is your create logic, it should be fine)
+    if (!session?.user?.accessToken) return;
+
+    console.log('[handleSave] Received formData:', formData);
+    if (!formData.studentId) {
+        console.error('Validation failed: studentId is missing.', formData);
+        toast.error('Validation Failed: Please select a student.');
+        return;
+    }
+    
+    const payload = counselorAgendaFormToApiPayload(formData);
+    const toastId = toast.loading('Sending request...');
+    
+    const res = await createCounselorAppointmentRequest(payload, session.user.accessToken);
+
+    if (res.success && res.data) {
+      toast.success('Appointment request sent!', { id: toastId });
+      fetchData(); // Refresh data
+      closeModal();
+    } else {
+      toast.error(`Error: ${res.message}`, { id: toastId });
+    }
   };
 
-  // ⬇️ --- FIX FOR "BUTTONS NOT WORKING" --- ⬇️
-  // These functions are passed to the modal
   const handleAccept = async (agenda: AgendaData) => {
     if (!session?.user?.accessToken || !agenda.request_id) return;
     
@@ -174,7 +249,7 @@ export default function CounselorAppointmentsPage() {
       fetchData(); // Refresh data
       closeModal();
     } else {
-      toast.error(`Error: ${res.message}`);
+      toast.error(`Error accepting: ${res.message}`);
     }
   };
 
@@ -188,28 +263,28 @@ export default function CounselorAppointmentsPage() {
       fetchData(); // Refresh data
       closeModal();
     } else {
-      toast.error(`Error: ${res.message}`);
+      toast.error(`Error declining: ${res.message}`);
     }
   };
   
   const handleCancel = async (agenda: AgendaData) => {
-    // TODO: Add your cancel API call here
+    // TODO: Implement cancel logic
     toast.info('Cancel feature not yet implemented.');
   };
-  // ⬆️ --- END OF FIX --- ⬆️
 
+  // --- Memoized Props ---
 
-  // ... (Memoized studentOptions and initialCreateData)
   const studentOptions = useMemo(() => {
-    return students.map(s => ({ id: s.user_id, name: s.user_name }));
+    return students.map(s => ({ 
+      id: s.student_id, 
+      name: s.email  // must use email as 'user_name' is not provided
+    }));
   }, [students]);
 
   const initialCreateData = useMemo(() => {
     if (!prefilledDate) {
-      return undefined; // This is a valid value for the prop
+      return undefined;
     }
-    
-    // This is the CounselorAgendaForm object
     return {
       date: prefilledDate,
       type: 'counseling' as 'counseling' | 'routine_interview',
@@ -219,12 +294,14 @@ export default function CounselorAppointmentsPage() {
     };
   }, [prefilledDate]);
 
+  // --- Render ---
 
   return (
     <div className="p-4 md:p-8 space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">My Schedule</h1>
       
-      {/* ... (Your CalendarComponent and AgendaComponent) ... */}
+      {isLoading && <p>Loading schedule...</p>}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <CalendarComponent
@@ -239,6 +316,7 @@ export default function CounselorAppointmentsPage() {
             }}
           />
         </div>
+        
         <div className="lg:col-span-1">
           <AgendaComponent
             agendas={allAgendas}
@@ -247,7 +325,6 @@ export default function CounselorAppointmentsPage() {
           />
         </div>
       </div>
-
 
       {/* --- Modals --- */}
       
@@ -261,8 +338,6 @@ export default function CounselorAppointmentsPage() {
         submitText="Send Request"
       />
 
-      {/* ⬇️ --- FIX FOR "BUTTONS NOT WORKING" --- ⬇️ */}
-      {/* We must pass the handler functions as props */}
       <AgendaDetailsModal
         agenda={selectedAgenda}
         onClose={closeModal}
@@ -270,8 +345,15 @@ export default function CounselorAppointmentsPage() {
         onDecline={handleDecline}
         onCancel={handleCancel}
       />
-      {/* ⬆️ --- END OF FIX --- ⬆️ */}
-
+      
+      <DayAgendasModal
+        isOpen={isDayModalOpen}
+        onClose={closeModal}
+        date={selectedDayDate}
+        agendas={selectedDayAgendas}
+        onAgendaClick={handleAgendaClick}
+        onCreateAgenda={handleCreateAgendaForDay}
+      />
     </div>
   );
 }

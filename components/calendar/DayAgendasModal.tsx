@@ -1,8 +1,9 @@
+// components/appointments/DayAgendasModal.tsx
 'use client';
 
 import React from 'react';
 import { X, Plus } from 'lucide-react';
-import { AgendaData, agendaColors } from '../types/agenda.types';
+import { AgendaData, agendaColors } from '../types/agenda.types'; // Use your types
 
 interface DayAgendasModalProps {
   isOpen: boolean;
@@ -44,7 +45,8 @@ export default function DayAgendasModal({
       >
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-800">Agendas for {formattedDate}</h2>
+            <h2 className="text-xl font-bold text-gray-800">Agendas for</h2>
+            <p className="text-lg font-semibold text-purple-700">{formattedDate}</p>
           </div>
           <button
             onClick={onClose}
@@ -57,21 +59,25 @@ export default function DayAgendasModal({
 
         <div className="space-y-3 mb-4">
           {agendas.map((agenda) => {
-            const colors = agendaColors[agenda.type] || agendaColors['Meeting'];
+            const colors = agendaColors[agenda.type] || agendaColors['Default'];
 
             return (
               <div
                 key={agenda.id}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onAgendaClick(agenda);
+                  onAgendaClick(agenda); // This will open the DetailsModal
                 }}
                 className={`p-4 rounded-xl border-l-4 ${colors.border} ${colors.bg} cursor-pointer hover:shadow-md transition`}
               >
+                {/* ⬇️ --- MODIFIED --- ⬇️ */}
                 <div className="flex items-center gap-2 mb-2">
                   <div className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                  <h3 className="font-bold text-gray-800">{agenda.title}</h3>
+                  {/* Show student name for counselors */}
+                  <h3 className="font-bold text-gray-800">{agenda.student_name}</h3>
                 </div>
+                {/* ⬆️ --- END MODIFIED --- ⬆️ */}
+                
                 <p className={`text-sm font-medium ${colors.text} mb-2`}>
                   {agenda.type}
                 </p>
@@ -86,7 +92,7 @@ export default function DayAgendasModal({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onCreateAgenda();
+            onCreateAgenda(); // This will open the CreateModal
           }}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
         >
