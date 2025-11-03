@@ -11,6 +11,7 @@ interface CalendarComponentProps {
   onAgendaClick: (agenda: AgendaData) => void;
   onCreateAgenda: () => void;
   onDayClick: (date: string, agendas: AgendaData[]) => void;
+  onMonthYearChange?: (month: number, year: number) => void;
 }
 
 export default function CalendarComponent({ 

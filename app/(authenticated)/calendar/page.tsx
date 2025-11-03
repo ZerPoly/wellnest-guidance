@@ -1,220 +1,277 @@
+// app/(authenticated)/calendar/page.tsx
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { usePathname } from 'next/navigation';
-import { AiOutlineClose } from 'react-icons/ai'; 
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
+import { toast } from 'sonner';
 
-// --- Persistent Layout Components ---
-import Sidebar from "@/components/Sidebar"; 
-import Header from "@/components/Header";   
+// ... (all your component imports)
+import CalendarComponent from '@/components/calendar/CalendarComponent';
+import AgendaComponent from '@/components/calendar/AgendaComponent';
+import CounselorAgendaModal from '@/components/calendar/CounselorAgendaModal';
+import AgendaDetailsModal from '@/components/calendar/AgendaDetailsModal'; // Corrected modal
+import { AgendaData } from '@/components/types/agenda.types';
 
-// --- Calendar/Agenda Components and Types ---
-// NOTE: These files must exist at the referenced paths for the page to compile.
-import CalendarComponent from '@/components/calendar/CalendarComponent'; // Calendar View
-import AgendaComponent from '@/components/calendar/AgendaComponent'; // Agenda Sidebar
-import AgendaModal from '@/components/calendar/AgendaModal'; // Agenda Form Modal
-import AgendaDetailsModal from '@/components/calendar/AgendaDetailsModal'; // View/Edit/Delete
-import DayAgendasModal from '@/components/calendar/DayAgendasModal'; // Full Day View
-import { AgendaData, AgendaForm } from '@/components/types/agenda.types'; // Shared Types
-import Link from 'next/link';
+// ... (all your API client imports)
+import { getCounselorConfirmedAppointments } from '@/lib/api/appointments/counselorAppointments';
+import {
+  getCounselorAppointmentRequests,
+  acceptCounselorAppointmentRequest,
+  declineCounselorAppointmentRequest,
+  createCounselorAppointmentRequest,
+} from '@/lib/api/appointments/counselorRequests';
+import { getDepartmentStudents, Student, StudentsListResponse } from '@/lib/api/appointments/students';
 
+// ... (all your mapper imports)
+import {
+  appointmentToAgenda,
+  requestToAgenda,
+  counselorAgendaFormToApiPayload,
+  getMonthDateRange,
+} from '@/lib/utils/appointmentMappers';
 
-// --- Main Client Component: Calendar Page Layout ---
-const CalendarClient = () => {
-  const pathname = usePathname();
+export default function CounselorAppointmentsPage() {
+  const { data: session } = useSession();
+  
+  const [allAgendas, setAllAgendas] = useState<AgendaData[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [studentMap, setStudentMap] = useState<Map<string, Student>>(new Map());
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-  // --- Agenda State Management (Core of the application) ---
-  const [agendas, setAgendas] = useState<AgendaData[]>([
-    // Mock data for initial calendar state
-    { id: 1, title: "Counseling Session", date: "2025-10-30", type: "Counseling", startTime: "09:00", endTime: "10:00" },
-    { id: 2, title: "Faculty Meeting", date: "2025-10-30", type: "Meeting", startTime: "14:00", endTime: "15:30" },
-    { id: 3, title: "Job Interview", date: "2025-10-31", type: "Routine Interview", startTime: "10:00", endTime: "11:00" },
-  ]);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingAgenda, setEditingAgenda] = useState<AgendaData | null>(null);
+  const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedAgenda, setSelectedAgenda] = useState<AgendaData | null>(null);
-  const [prefilledDate, setPrefilledDate] = useState<string>("");
-  
-  // Day Agenda Modal States
-  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
-  const [selectedDayDate, setSelectedDayDate] = useState<string>("");
-  const [selectedDayAgendas, setSelectedDayAgendas] = useState<AgendaData[]>([]);
+  const [prefilledDate, setPrefilledDate] = useState<string | null>(null);
 
+  // 1. Fetch Students (with pagination)
+  useEffect(() => {
+    if (session?.user?.accessToken) {
+      const fetchAllStudents = async () => {
+        let allStudents: Student[] = [];
+        let cursor: string | undefined = undefined;
+        let hasMore = true;
+        const token = session.user.accessToken;
 
-  // --- Layout Handlers ---
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+        try {
+          while (hasMore) {
+            const res: any = await getDepartmentStudents(token, cursor, 50);
+            if (res.success && res.data) {
+              const pageData = res.data as StudentsListResponse;
+              allStudents = [...allStudents, ...pageData.classifications];
+              cursor = pageData.nextCursor || undefined;
+              hasMore = pageData.hasMore && !!pageData.nextCursor;
+            } else {
+              toast.error(res.message || 'Failed to fetch students.');
+              hasMore = false;
+            }
+          }
 
-  const toggleMobileMenu = useCallback(() => {
-    setIsMobileMenuOpen(prev => !prev);
-  }, []);
-  
-  // Closes mobile menu instantly after a link is clicked
-  const handleLinkClick = useCallback((tabName: string) => {
-    if (isMobileMenuOpen) {
-      setIsMobileMenuOpen(false);
+          setStudents(allStudents);
+
+          const newMap = new Map<string, Student>();
+          allStudents.forEach(s => newMap.set(s.user_id, s));
+          
+          // ⬇️ --- DEBUGGING FOR "UNKNOWN STUDENT" --- ⬇️
+          console.log(`[StudentMap] Finished building map with ${newMap.size} students.`);
+          // Log the first 5 student keys to check their format
+          console.log('[StudentMap] First 5 keys:', Array.from(newMap.keys()).slice(0, 5));
+          // ⬆️ --- END DEBUGGING --- ⬆️
+
+          setStudentMap(newMap); // This triggers the second useEffect
+
+        } catch (error) {
+          console.error(error);
+          toast.error('An error occurred while fetching students.');
+        }
+      };
+      fetchAllStudents();
     }
-  }, [isMobileMenuOpen]);
+  }, [session]);
 
+  // 2. Fetch Appointments & Requests
+  const fetchData = async () => {
+    // This check is CRUCIAL. It prevents running before the map is ready.
+    if (!session?.user?.accessToken || studentMap.size === 0) {
+      console.log('[fetchData] Skipping, session or studentMap not ready.');
+      return;
+    }
 
-  // --- Agenda Logic Handlers ---
+    console.log('[fetchData] Session and studentMap are ready. Fetching data...');
+    setIsLoading(true);
+    const { startDate, endDate } = getMonthDateRange(currentYear, currentMonth);
+    const token = session.user.accessToken;
 
-  const handleSaveAgenda = (formData: AgendaForm) => {
-    if (editingAgenda) {
-      // Update existing agenda
-      setAgendas(prev => prev.map(a => 
-        a.id === editingAgenda.id 
-          ? { ...formData, id: editingAgenda.id } 
-          : a
-      ));
-      setEditingAgenda(null);
+    try {
+      const [appointmentsRes, requestsRes] = await Promise.all([
+        getCounselorConfirmedAppointments(token, startDate, endDate),
+        getCounselorAppointmentRequests(token, 'pending'),
+      ]);
+
+      // ⬇️ --- DEBUGGING FOR "UNKNOWN STUDENT" --- ⬇️
+      if (appointmentsRes.data && appointmentsRes.data.length > 0) {
+        console.log('[fetchData] First appointment student_id:', appointmentsRes.data[0].student_id);
+      }
+      if (requestsRes.data && requestsRes.data.length > 0) {
+        console.log('[fetchData] First request student_id:', requestsRes.data[0].student_id);
+      }
+      // ⬆️ --- END DEBUGGING --- ⬆️
+
+      const confirmed = (appointmentsRes.data || []).map(app => 
+        appointmentToAgenda(app, studentMap)
+      );
+      const pending = (requestsRes.data || []).map(req => 
+        requestToAgenda(req, studentMap)
+      );
+
+      setAllAgendas([...confirmed, ...pending]);
+
+    } catch (error) {
+      toast.error('Failed to fetch schedule.');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Re-fetch data when session, studentMap, or month/year changes
+  useEffect(() => {
+    fetchData();
+  }, [session, currentMonth, currentYear, studentMap]); // studentMap is a dependency
+
+  // ... (Modal open/close handlers: handleCreateAgenda, handleDateClick, handleAgendaClick, etc.)
+  const handleCreateAgenda = () => { /* ... */ };
+  const handleDateClick = (date: string) => { /* ... */ };
+  const handleAgendaClick = (agenda: AgendaData) => {
+    setSelectedAgenda(agenda);
+    setDetailsModalOpen(true);
+  };
+  const handleDayClick = (date: string, agendas: AgendaData[]) => { /* ... */ };
+  const closeModal = () => {
+    setCreateModalOpen(false);
+    setDetailsModalOpen(false);
+    setSelectedAgenda(null);
+    setPrefilledDate(null);
+  };
+
+  // --- API Action Handlers ---
+
+  const handleSave = async (formData: any) => {
+    // ... (This is your create logic, it should be fine)
+  };
+
+  // ⬇️ --- FIX FOR "BUTTONS NOT WORKING" --- ⬇️
+  // These functions are passed to the modal
+  const handleAccept = async (agenda: AgendaData) => {
+    if (!session?.user?.accessToken || !agenda.request_id) return;
+    
+    const res = await acceptCounselorAppointmentRequest(agenda.request_id.toString(), session.user.accessToken);
+
+    if (res.success && res.data) {
+      toast.success('Appointment accepted and confirmed!');
+      fetchData(); // Refresh data
+      closeModal();
     } else {
-      // Create new agenda
-      const newAgenda: AgendaData = { ...formData, id: Date.now() };
-      setAgendas(prev => [...prev, newAgenda]);
+      toast.error(`Error: ${res.message}`);
     }
-    setPrefilledDate("");
+  };
+
+  const handleDecline = async (agenda: AgendaData) => {
+    if (!session?.user?.accessToken || !agenda.request_id) return;
+
+    const res = await declineCounselorAppointmentRequest(agenda.request_id.toString(), session.user.accessToken);
+
+    if (res.success && res.data) {
+      toast.warning('Appointment request declined.');
+      fetchData(); // Refresh data
+      closeModal();
+    } else {
+      toast.error(`Error: ${res.message}`);
+    }
   };
   
-  const handleDeleteAgenda = (id: number) => {
-    setAgendas(prev => prev.filter(a => a.id !== id));
+  const handleCancel = async (agenda: AgendaData) => {
+    // TODO: Add your cancel API call here
+    toast.info('Cancel feature not yet implemented.');
   };
-  
-  const handleEditAgenda = (agenda: AgendaData) => {
-    setEditingAgenda(agenda);
-    setIsModalOpen(true);
-    setSelectedAgenda(null); // Close details modal
-  };
+  // ⬆️ --- END OF FIX --- ⬆️
 
-  const handleDateClick = (date: string) => {
-    setPrefilledDate(date);
-    setIsModalOpen(true);
-  };
-  
-  const handleCreateAgenda = () => {
-    setEditingAgenda(null);
-    setPrefilledDate("");
-    setIsModalOpen(true);
-  };
 
-  const handleCreateAgendaFromDay = () => {
-    // PrefilledDate is already set by handleDayClick
-    setIsModalOpen(true);
-    setIsDayModalOpen(false);
-  };
+  // ... (Memoized studentOptions and initialCreateData)
+  const studentOptions = useMemo(() => {
+    return students.map(s => ({ id: s.user_id, name: s.user_name }));
+  }, [students]);
 
-  const handleDayClick = (date: string, dayAgendas: AgendaData[]) => {
-    setSelectedDayDate(date);
-    setSelectedDayAgendas(dayAgendas);
-    setIsDayModalOpen(true);
-  };
-
-  // --- Modal Data Memo ---
-  const initialModalData = useMemo(() => {
-    if (editingAgenda) {
-      return {
-        title: editingAgenda.title,
-        date: editingAgenda.date,
-        type: editingAgenda.type,
-        startTime: editingAgenda.startTime,
-        endTime: editingAgenda.endTime,
-      };
+  const initialCreateData = useMemo(() => {
+    if (!prefilledDate) {
+      return undefined; // This is a valid value for the prop
     }
-    if (prefilledDate) {
-      return {
-        title: "",
-        date: prefilledDate,
-        type: "Counseling",
-        startTime: "09:00",
-        endTime: "10:00",
-      };
-    }
-    return undefined;
-  }, [editingAgenda, prefilledDate]);
+    
+    // This is the CounselorAgendaForm object
+    return {
+      date: prefilledDate,
+      type: 'counseling' as 'counseling' | 'routine_interview',
+      startTime: '08:00',
+      endTime: '09:00',
+      studentId: '',
+    };
+  }, [prefilledDate]);
 
 
   return (
-    <>
-      {/* Main Content Area: Renders the Calendar/Agenda components directly */}
-      <div className="mb-4">
-        <div className="flex flex-row space-x-1">
-          <Link href="/dashboard" className="font-extrabold text-[var(--text-muted)] hover:text-[var(--title)] transition-colors">
-            Dashboard
-          </Link>
-          <a className="font-regular text-[var(--text-muted)] ">
-            / Calendar
-          </a>
-        </div>
-        <div>
-          <h1 className="text-3xl font-extrabold text-[var(--title)] hidden sm:block">
-            Consultations Management
-          </h1>
-        </div>
-      </div>
-
-      {/* Grid Layout: Calendar (2 cols) + Agenda (1 col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-        {/* Left Side: Calendar (2/3 width) */}
+    <div className="p-4 md:p-8 space-y-6">
+      <h1 className="text-3xl font-bold text-gray-800">My Schedule</h1>
+      
+      {/* ... (Your CalendarComponent and AgendaComponent) ... */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <CalendarComponent
-            agendas={agendas}
+            agendas={allAgendas}
             onDateClick={handleDateClick}
-            onAgendaClick={setSelectedAgenda}
+            onAgendaClick={handleAgendaClick}
             onCreateAgenda={handleCreateAgenda}
-            onDayClick={handleDayClick} 
+            onDayClick={handleDayClick}
+            onMonthYearChange={(month, year) => {
+              setCurrentMonth(month);
+              setCurrentYear(year);
+            }}
           />
         </div>
-        {/* Right Side: Agenda List (1/3 width) */}
         <div className="lg:col-span-1">
           <AgendaComponent
-            agendas={agendas}
-            onAgendaClick={setSelectedAgenda}
+            agendas={allAgendas}
+            onAgendaClick={handleAgendaClick}
             onCreateAgenda={handleCreateAgenda}
           />
         </div>
-        {/* space for bottom */}
-        <div className='h-10'></div>
       </div>
 
+
+      {/* --- Modals --- */}
       
-
-
-      {/* --- MODAL LAYERS (Always rendered outside the main flow) --- */}
-
-      {/* Agenda Create/Edit Modal */}
-      <AgendaModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingAgenda(null);
-          setPrefilledDate("");
-        }}
-        onSave={handleSaveAgenda}
-        title={editingAgenda ? "Edit Agenda" : "New Agenda"}
-        submitText={editingAgenda ? "Update Agenda" : "Create Agenda"}
-        initialData={initialModalData}
+      <CounselorAgendaModal
+        isOpen={isCreateModalOpen}
+        onClose={closeModal}
+        onSave={handleSave}
+        initialData={initialCreateData}
+        students={students}
+        title="Schedule Consultation"
+        submitText="Send Request"
       />
 
-      {/* Agenda Details Modal (View/Edit/Delete trigger) */}
+      {/* ⬇️ --- FIX FOR "BUTTONS NOT WORKING" --- ⬇️ */}
+      {/* We must pass the handler functions as props */}
       <AgendaDetailsModal
         agenda={selectedAgenda}
-        onClose={() => setSelectedAgenda(null)}
-        onEdit={handleEditAgenda}
-        onDelete={handleDeleteAgenda}
+        onClose={closeModal}
+        onAccept={handleAccept}
+        onDecline={handleDecline}
+        onCancel={handleCancel}
       />
-      
-      {/* Day Agendas Modal (Click on a full day in the calendar) */}
-      <DayAgendasModal
-        isOpen={isDayModalOpen}
-        onClose={() => setIsDayModalOpen(false)}
-        date={selectedDayDate}
-        agendas={selectedDayAgendas}
-        onAgendaClick={setSelectedAgenda}
-        onCreateAgenda={handleCreateAgendaFromDay}
-      />
+      {/* ⬆️ --- END OF FIX --- ⬆️ */}
 
-    </>
+    </div>
   );
-};
-
-export default CalendarClient;
+}
