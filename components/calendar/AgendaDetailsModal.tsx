@@ -6,6 +6,30 @@ import { X, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { AgendaData, agendaColors } from '../types/agenda.types';
 import { toast } from 'sonner';
 
+const getCounselorStatusBadge = (agenda: AgendaData) => {
+    const { status, created_by, student_response } = agenda;
+
+    if (status === 'confirmed') {
+      return { label: '✓ Confirmed', className: 'bg-green-100 text-green-700' };
+    }
+    
+    if (status === 'declined') {
+      if (student_response === 'declined') {
+        return { label: '✗ Declined by Student', className: 'bg-red-100 text-red-700' };
+      }
+      return { label: '✗ Declined by You', className: 'bg-red-100 text-red-700' };
+    }
+
+    if (status === 'pending') {
+      if (created_by === 'counselor') {
+        return { label: '⏳ Pending Student', className: 'bg-yellow-100 text-yellow-700' };
+      }
+      // If created_by === 'student'
+      return { label: '⏳ Pending Your Reply', className: 'bg-yellow-100 text-yellow-700' };
+    }
+    return { label: `? ${status}`, className: 'bg-gray-100 text-gray-700' };
+  };
+
 interface AgendaDetailsModalProps {
   agenda: AgendaData | null;
   onClose: () => void;
@@ -34,6 +58,7 @@ export default function AgendaDetailsModal({
   const canBeCancelled = isConfirmed; 
 
   // --- Handlers ---
+  const statusBadge = getCounselorStatusBadge(agenda);
   
   const handleAction = async (actionFn: (agenda: AgendaData) => Promise<any>, confirmText?: string) => {
     
@@ -102,15 +127,9 @@ export default function AgendaDetailsModal({
         {agenda.status && (
           <div className="mb-4">
             <span
-              className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                agenda.status === 'confirmed' ? 'bg-green-100 text-green-700' : 
-                agenda.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
-                'bg-red-100 text-red-700'
-              }`}
+              className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusBadge.className}`}
             >
-              {agenda.status === 'confirmed' ? '✓ Confirmed' : 
-               agenda.status === 'pending' ? '⏳ Pending' : 
-               '✗ Declined'}
+              {statusBadge.label}
             </span>
           </div>
         )}
