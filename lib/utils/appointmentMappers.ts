@@ -54,7 +54,7 @@ export function appointmentToAgenda(
     
     // Add student info
     student_id: appointment.student_id,
-    student_name: student?.user_name || 'Unknown Student',
+    student_name: student?.email || 'Unknown Student',
     
     // This is less critical for confirmed items, but good to have
     // We'd need to fetch the original request to know 'created_by' for sure,

@@ -137,10 +137,7 @@ export default function CounselorAgendaModal({
   };
 
   const filteredStudents = students.filter(student =>
-    // ⬇️ MODIFIED LINES ⬇️
-    (student?.user_name?.toLowerCase() ?? '').includes(searchQuery.toLowerCase()) ||
     (student?.email?.toLowerCase() ?? '').includes(searchQuery.toLowerCase())
-    // ⬆️ END MODIFIED LINES ⬆️
   );
 
   if (!isOpen) return null;
