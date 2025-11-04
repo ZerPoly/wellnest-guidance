@@ -10,7 +10,8 @@ import CalendarComponent from '@/components/calendar/CalendarComponent';
 import AgendaComponent from '@/components/calendar/AgendaComponent';
 import CounselorAgendaModal from '@/components/calendar/CounselorAgendaModal';
 import AgendaDetailsModal from '@/components/calendar/AgendaDetailsModal';
-import DayAgendasModal from '@/components/calendar/DayAgendasModal'; 
+import DayAgendasModal from '@/components/calendar/DayAgendasModal';
+import PendingRequestsModal from '@/components/calendar/PendingRequestsModal'; 
 import { AgendaData } from '@/components/types/agenda.types';
 
 // --- API Client ---
@@ -59,6 +60,7 @@ export default function CounselorAppointmentsPage() {
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
   const [isDayModalOpen, setDayModalOpen] = useState(false);
+  const [isRequestsModalOpen, setRequestsModalOpen] = useState(false);
   
   const [selectedAgenda, setSelectedAgenda] = useState<AgendaData | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<string | null>(null);
@@ -211,7 +213,8 @@ export default function CounselorAppointmentsPage() {
   const handleAgendaClick = (agenda: AgendaData) => {
     setSelectedAgenda(agenda);
     setDetailsModalOpen(true);
-    setDayModalOpen(false);
+    setDayModalOpen(false); 
+    setRequestsModalOpen(false);
   };
   
   const handleDayClick = (date: string, agendas: AgendaData[]) => {
@@ -224,10 +227,17 @@ export default function CounselorAppointmentsPage() {
     }
   };
 
+  const handleViewRequests = () => {
+    console.log('[page.tsx] handleViewRequests: Opening requests modal...');
+    setRequestsModalOpen(true);
+  };
+
   const closeModal = () => {
     setCreateModalOpen(false);
     setDetailsModalOpen(false);
     setDayModalOpen(false);
+    setRequestsModalOpen(false);
+    
     setSelectedAgenda(null);
     setPrefilledDate(null);
     setSelectedDayAgendas([]);
@@ -322,6 +332,7 @@ export default function CounselorAppointmentsPage() {
               setCurrentMonth(month);
               setCurrentYear(year);
             }}
+            onViewRequests={handleViewRequests}
           />
         </div>
         
@@ -363,6 +374,14 @@ export default function CounselorAppointmentsPage() {
         onAgendaClick={handleAgendaClick}
         onCreateAgenda={handleCreateAgendaForDay}
       />
+
+      <PendingRequestsModal
+        isOpen={isRequestsModalOpen}
+        onClose={closeModal}
+        agendas={listAgendas} // Pass the full list
+        onAgendaClick={handleAgendaClick}
+      />
+
     </div>
   );
 }

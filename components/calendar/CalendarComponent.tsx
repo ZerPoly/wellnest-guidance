@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Inbox, Plus } from 'lucide-react';
 import { AgendaData, agendaColors } from '../types/agenda.types';
 import CustomDropdown from './CustomDropdown';
 
@@ -12,6 +12,7 @@ interface CalendarComponentProps {
   onCreateAgenda: () => void;
   onDayClick: (date: string, agendas: AgendaData[]) => void;
   onMonthYearChange?: (month: number, year: number) => void;
+  onViewRequests: () => void;
 }
 
 export default function CalendarComponent({ 
@@ -20,6 +21,7 @@ export default function CalendarComponent({
   onAgendaClick, 
   onCreateAgenda,
   onDayClick,
+  onViewRequests,
 }: CalendarComponentProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -217,6 +219,15 @@ export default function CalendarComponent({
           >
             <ChevronRight size={20} />
           </button>
+
+          <button
+            onClick={onViewRequests}
+            title="View Pending Requests"
+            className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+          >
+            <Inbox size={20} />
+          </button>
+
           <button
             onClick={onCreateAgenda}
             className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
