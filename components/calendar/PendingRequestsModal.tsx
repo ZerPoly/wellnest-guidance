@@ -34,7 +34,6 @@ interface PendingRequestsModalProps {
   onAgendaClick: (agenda: AgendaData) => void;
 }
 
-// Define Tab Type
 type RequestTab = 'pending' | 'declined';
 
 export default function PendingRequestsModal({
@@ -43,19 +42,17 @@ export default function PendingRequestsModal({
   agendas,
   onAgendaClick,
 }: PendingRequestsModalProps) {
-  // ⬇️ --- ADD STATE FOR TABS --- ⬇️
   const [activeTab, setActiveTab] = useState<RequestTab>('pending');
   
   if (!isOpen) return null;
 
-  // 1. Sort agendas by date and time
+  // 1. Sort and Filter data
   const sortedAgendas = agendas.sort((a, b) => {
     const dateCompare = a.date.localeCompare(b.date);
     if (dateCompare !== 0) return dateCompare;
     return a.startTime.localeCompare(b.startTime);
   });
 
-  // 2. Filter into the two lists we care about
   const pendingRequests = sortedAgendas.filter(a => a.status === 'pending');
   const declinedRequests = sortedAgendas.filter(a => a.status === 'declined');
 
@@ -63,7 +60,17 @@ export default function PendingRequestsModal({
   const listTitle = activeTab === 'pending' ? 'Pending Requests' : 'Declined Requests';
   const listColor = activeTab === 'pending' ? 'text-yellow-600' : 'text-red-600';
 
-  // Component for Tab Buttons (copied from ConsultationTable logic)
+  // 2. Group the filtered data by date
+  const groupedAgendas = dataToDisplay.reduce((groups, agenda) => {
+    const date = agenda.date;
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(agenda);
+    return groups;
+  }, {} as Record<string, AgendaData[]>);
+
+
   const TabButton: React.FC<{ tab: RequestTab, label: string, count: number }> = ({ tab, label, count }) => {
     const isActive = activeTab === tab;
     return (
@@ -82,7 +89,6 @@ export default function PendingRequestsModal({
       </button>
     );
   };
-  // ⬆️ --- END OF TAB LOGIC --- ⬆️
 
 
   return (
@@ -108,50 +114,68 @@ export default function PendingRequestsModal({
           </button>
         </div>
 
-        {/* --- ⬇️ Tab Control ⬇️ --- */}
+        {/* --- Tab Control --- */}
         <div className="flex space-x-3 mb-6 border-b pb-3">
           <TabButton tab="pending" label="Pending" count={pendingRequests.length} />
           <TabButton tab="declined" label="Declined" count={declinedRequests.length} />
         </div>
-        {/* --- ⬆️ End Tab Control ⬆️ --- */}
 
         {/* --- List Content --- */}
         <div className={`overflow-y-auto space-y-4 flex-1`}>
           
-          <h3 className={`text-sm font-bold uppercase tracking-wide ${listColor}`}>
+          <h3 className={`text-lg font-bold uppercase tracking-wide ${listColor}`}>
             {listTitle}
           </h3>
 
           {dataToDisplay.length > 0 ? (
-            <div className="space-y-3">
-              {dataToDisplay.map((agenda) => {
-                const colors = agendaColors[agenda.type] || agendaColors['Default'];
-                const statusBadge = getCounselorStatusBadge(agenda);
-                
+            <div className="space-y-6 mt-4">
+              {/* ⬇️ --- ITERATE OVER GROUPED DATES --- ⬇️ */}
+              {Object.keys(groupedAgendas).map((date) => {
+                const agendaDate = new Date(date + 'T00:00:00');
+                const dateLabel = agendaDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+                });
+
                 return (
-                  <div
-                    key={agenda.id}
-                    onClick={() => {
-                      onAgendaClick(agenda);
-                    }}
-                    className={`p-4 rounded-xl border-l-4 ${colors.border} ${colors.bg} cursor-pointer hover:shadow-md transition`}
-                  >
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <div className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                      <h4 className="font-bold text-gray-800">{agenda.student_name}</h4>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge.className}`}>
-                        {statusBadge.label}
-                      </span>
+                  <div key={date} className="space-y-3">
+                    {/* Date Separator */}
+                    <div className="sticky top-0 bg-white py-1 border-b border-gray-200 z-10">
+                        <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                            {dateLabel}
+                        </h4>
                     </div>
-                    <p className={`text-sm font-medium ${colors.text} mb-2`}>{agenda.type}</p>
-                    <div className="text-sm text-gray-600">
-                      <span>{new Date(agenda.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</span>
-                      <span className="mx-2">|</span>
-                      <span>{agenda.startTime} - {agenda.endTime}</span>
-                    </div>
+                    
+                    {/* Items for the specific date */}
+                    {groupedAgendas[date].map((agenda) => {
+                      const colors = agendaColors[agenda.type] || agendaColors['Default'];
+                      const statusBadge = getCounselorStatusBadge(agenda);
+                      
+                      return (
+                        <div
+                          key={agenda.id}
+                          onClick={() => {
+                            onAgendaClick(agenda); 
+                          }}
+                          className={`p-4 rounded-xl border-l-4 ${colors.border} ${colors.bg} cursor-pointer hover:shadow-md transition`}
+                        >
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <div className={`w-2 h-2 rounded-full ${colors.dot}`} />
+                            <h5 className="font-bold text-gray-800">{agenda.student_name}</h5>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge.className}`}>
+                              {statusBadge.label}
+                            </span>
+                          </div>
+                          <p className={`text-sm font-medium ${colors.text} mb-2`}>{agenda.type}</p>
+                          <div className="text-sm text-gray-600">
+                            <span>{agenda.startTime} - {agenda.endTime}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
+              {/* ⬆️ --- END ITERATION OVER GROUPED DATES --- ⬆️ */}
             </div>
           ) : (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
