@@ -96,7 +96,7 @@ export const students: Student[] = [
   { id: 5, name: "Sara White", email: "sarawhite@example.com", course: "BSCS", status: "In-Crisis", enrollmentDate: "2022-06-01", graduationDate: "2026-06-01" },
 ];
 
-// -------------------------------
+// ------------------------------
 // Schedule / Agenda Data (Optional initial)
 export const agendas: AgendaData[] = [
   {

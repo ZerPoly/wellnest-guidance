@@ -23,6 +23,7 @@ export default function CalendarComponent({
     onCreateAgenda,
     onDayClick,
     onViewRequests,
+    onMonthYearChange,
 }: CalendarComponentProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -30,8 +31,9 @@ export default function CalendarComponent({
 
     useEffect(() => {
         setCurrentDate(new Date(selectedYear, selectedMonth, 1));
-        // You should include onMonthYearChange logic here if needed, 
-        // but for now, we leave it out to prevent new errors.
+        if (onMonthYearChange) {
+            onMonthYearChange(selectedMonth, selectedYear);
+        }
     }, [selectedMonth, selectedYear]);
 
     const monthNames = [

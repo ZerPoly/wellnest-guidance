@@ -19,6 +19,7 @@ export interface ApiResponse<T> {
  * A pending request for an appointment.
  */
 export interface AppointmentRequest {
+  date: any;
   request_id: string;
   student_id: string;
   counselor_id: string;
