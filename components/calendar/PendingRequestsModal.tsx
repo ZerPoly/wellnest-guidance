@@ -1,11 +1,9 @@
-// components/calendar/PendingRequestsModal.tsx
 'use client';
 
 import React, { useState } from 'react';
 import { X, Inbox } from 'lucide-react';
 import { AgendaData, agendaColors } from '../types/agenda.types';
 
-// We can re-use the badge logic from your other components
 const getCounselorStatusBadge = (agenda: AgendaData) => {
   const { status, created_by, student_response } = agenda;
 
@@ -30,7 +28,7 @@ const getCounselorStatusBadge = (agenda: AgendaData) => {
 interface PendingRequestsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  agendas: AgendaData[]; // This will be the 'listAgendas'
+  agendas: AgendaData[]; 
   onAgendaClick: (agenda: AgendaData) => void;
 }
 
@@ -129,7 +127,6 @@ export default function PendingRequestsModal({
 
           {dataToDisplay.length > 0 ? (
             <div className="space-y-6 mt-4">
-              {/* ⬇️ --- ITERATE OVER GROUPED DATES --- ⬇️ */}
               {Object.keys(groupedAgendas).map((date) => {
                 const agendaDate = new Date(date + 'T00:00:00');
                 const dateLabel = agendaDate.toLocaleDateString('en-US', { 
@@ -175,7 +172,6 @@ export default function PendingRequestsModal({
                   </div>
                 );
               })}
-              {/* ⬆️ --- END ITERATION OVER GROUPED DATES --- ⬆️ */}
             </div>
           ) : (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
