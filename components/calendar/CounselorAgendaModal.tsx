@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, ChevronDown, Search } from 'lucide-react';
 import { Student } from '@/lib/api/appointments/students';
 
@@ -44,6 +44,21 @@ const addOneHour = (time: string): string => {
   return `${String(newHour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 };
 
+// helper to calculate future date skipping weekends
+const addWorkingDays = (startDate: Date, daysToAdd: number): Date => {
+  const result = new Date(startDate);
+  let count = 0;
+  while (count < daysToAdd) {
+    result.setDate(result.getDate() + 1);
+    const day = result.getDay();
+    // 0 is Sunday, 6 is Saturday
+    if (day !== 0 && day !== 6) {
+      count++;
+    }
+  }
+  return result;
+};
+
 export default function CounselorAgendaModal({
   isOpen,
   onClose,
@@ -63,9 +78,12 @@ export default function CounselorAgendaModal({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const minDate = new Date();
-  minDate.setDate(minDate.getDate() + 7);
-  const minDateString = minDate.toISOString().split("T")[0];
+  // calculate min date dynamically (5 working days from today)
+  const minDateString = useMemo(() => {
+    const today = new Date();
+    const minDate = addWorkingDays(today, 5);
+    return minDate.toISOString().split("T")[0];
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -113,12 +131,15 @@ export default function CounselorAgendaModal({
 
     const [year, month, day] = date.split('-').map(Number);
     const selectedDate = new Date(year, month - 1, day);
-    const minDateCheck = new Date();
-    minDateCheck.setDate(minDateCheck.getDate() + 7);
-    minDateCheck.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
 
-    if (selectedDate < minDateCheck) {
-      setValidationError("Date must be at least 1 week (7 days) in advance.");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const minAllowedDate = addWorkingDays(today, 5);
+    minAllowedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < minAllowedDate) {
+      setValidationError("Date must be at least 5 working days in advance.");
       return;
     }
 
@@ -202,7 +223,7 @@ export default function CounselorAgendaModal({
                 <option value="">-- Choose a student --</option>
                 {filteredStudents.map((student) => (
                   <option key={student.student_id} value={student.student_id}>
-                    {student.email} {/* Show email, not user_name */}
+                    {student.email}
                   </option>
                 ))}
               </select>
@@ -259,7 +280,7 @@ export default function CounselorAgendaModal({
               className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-purple-400"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Must be at least 7 days in advance
+              Must be at least 5 working days in advance
             </p>
           </div>
 
@@ -269,19 +290,25 @@ export default function CounselorAgendaModal({
               <label className="block text-[#46484E] mb-1 font-bold text-base">
                 Start Time
               </label>
-              <select
-                name="startTime"
-                value={formData.startTime}
-                onChange={handleChange}
-                required
-                className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-purple-400 appearance-none bg-white"
-              >
-                {START_TIME_SLOTS.map((time) => (
-                  <option key={time} value={time}>
-                    {formatDisplayTime(time)}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  name="startTime"
+                  value={formData.startTime}
+                  onChange={handleChange}
+                  required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-purple-400 appearance-none bg-white pr-10"
+                >
+                  {START_TIME_SLOTS.map((time) => (
+                    <option key={time} value={time}>
+                      {formatDisplayTime(time)}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-500"
+                  size={20}
+                />
+              </div>
             </div>
 
             <div className="flex-1">

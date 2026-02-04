@@ -70,8 +70,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen }) => {
     }
   }, [isCollapsed, isLoaded]);
 
-  // 2. LOGOUT HANDLER - Uses the initialized router for redirect and refresh
-  const handleSidebarLogout = useCallback(async () => {
+  // 2. SIGN OUT HANDLER - Uses the initialized router for redirect and refresh
+  const handleSidebarSignOut = useCallback(async () => {
     await signOut({ redirect: false });
     router.push("/");
     router.refresh();
@@ -190,7 +190,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen }) => {
         </nav>
       </div>
 
-      {/* Footer Section: Version, User, Logout */}
+      {/* Footer Section: Version, User, Sign Out */}
       <div className="flex flex-col gap-2 pt-4 border-t border-zinc-700">
         
         {/* Version Indicator */}
@@ -210,13 +210,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen }) => {
             )}
         </div>
 
-        {/* Logout Button (NOW USES THE ROBUST HANDLER) */}
+        {/* Sign Out Button (NOW USES THE ROBUST HANDLER) */}
         <button 
           className={`p-3 rounded-xl flex items-center transition-colors text-red-400 hover:bg-zinc-800 text-sm ${isVisuallyCollapsed ? 'justify-center' : ''}`}
-          onClick={handleSidebarLogout} // <-- USING NEW HANDLER
+          onClick={handleSidebarSignOut} // <-- USING NEW HANDLER
         >
           {isVisuallyCollapsed ? (
-            <TooltipWrapper content="Logout">
+            <TooltipWrapper content="Sign Out">
               <div className="flex items-center"> 
                 <AiOutlineLogout size={20} />
               </div>
@@ -224,7 +224,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen }) => {
           ) : (
             <div className="flex items-center space-x-4">
               <AiOutlineLogout size={20} />
-              <span className="font-medium">Logout</span>
+              <span className="font-medium">Sign Out</span>
             </div>
           )}
         </button>

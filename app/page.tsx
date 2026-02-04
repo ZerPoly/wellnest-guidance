@@ -5,9 +5,9 @@ import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai'; 
 
-const PAGE_TITLE = "Portal Login";
+const PAGE_TITLE = "Portal Sign In";
 
-export default function LoginPage() {
+export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
@@ -44,13 +44,13 @@ export default function LoginPage() {
       }
 
       if (result?.ok) {
-        // SUCCESS: Redirect the user only AFTER successful login attempt
+        // SUCCESS: Redirect the user only AFTER successful sign in attempt
         const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
         router.push(callbackUrl);
         router.refresh();
       }
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Sign In error:", err);
       setError("An unexpected error occurred. Please try again.");
       setIsSubmitting(false);
     }
@@ -117,7 +117,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Login Form */}
+        {/* Sign In Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Email Input */}
@@ -191,7 +191,7 @@ export default function LoginPage() {
 
         {/* Info Text */}
         <p className="text-xs text-center text-[var(--text-muted)]">
-          Your role will be automatically detected upon login
+          Your role will be automatically detected upon sign in.
         </p>
         
       </div>
