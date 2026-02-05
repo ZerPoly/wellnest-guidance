@@ -34,6 +34,10 @@ declare module "next-auth" {
 
     // This custom property is added to the session
     error?: "RefreshAccessTokenError";
+    
+    // ⬇️ ADDED: Role-specific tokens for convenience ⬇️
+    counselorToken?: string; // Available when role is 'counselor'
+    adminToken?: string;     // Available when role is 'admin' or 'super_admin'
   }
 }
 
@@ -62,4 +66,3 @@ declare module "next-auth/jwt" {
     error?: "RefreshAccessTokenError";
   }
 }
-

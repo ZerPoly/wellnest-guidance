@@ -1,69 +1,147 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { AiOutlineSearch, AiOutlineFilter, AiOutlineSortAscending, AiOutlineCalendar } from 'react-icons/ai';
+import { getCounselorConfirmedAppointments } from '@/lib/api/appointments/counselorAppointments';
+import { Appointment } from '@/lib/api/appointments/types';
 
 interface Consultation {
-  id: number;
+  id: string;
   email: string;
-  sessionType: 'Counseling' | 'Routine Interview' | 'Follow-up';
+  sessionType: 'Counseling' | 'Routine Interview' | 'Meeting' | 'Event';
   time: string;
   date: string;
+  rawDate: Date;
 }
 
-// Define Sorting Types
 type SortKey = 'date' | 'email';
-type SortDirection = 'asc' | 'desc'; // Ascending (A-Z, Oldest) or Descending (Z-A, Newest)
+type SortDirection = 'asc' | 'desc';
 
-// Mock Data for Upcoming Consultations
-const mockUpcomingData: Consultation[] = [
-  { id: 1, email: 'johndelacruz@umak.edu.ph', sessionType: 'Counseling', time: '11:30 AM', date: '08/16/2025' },
-  { id: 2, email: 'isabella.cruz@umak.edu.ph', sessionType: 'Routine Interview', time: '4:30 PM', date: '08/18/2025' },
-  { id: 3, email: 'ramon.villanueva@umak.edu.ph', sessionType: 'Routine Interview', time: '7:30 AM', date: '08/21/2025' },
-  { id: 4, email: 'clarisse.delarosa@umak.edu.ph', sessionType: 'Counseling', time: '3:00 PM', date: '08/24/2025' },
-  { id: 5, email: 'miguel.santos@umak.edu.ph', sessionType: 'Counseling', time: '1:00 PM', date: '08/25/2025' },
-  { id: 6, email: 'jasmine.mercado@umak.edu.ph', sessionType: 'Counseling', time: '11:30 AM', date: '08/28/2025' },
-];
-
-// Mock Data for Previous Consultations
-const mockPreviousData: Consultation[] = [
-    { id: 7, email: 'maria.lopez@umak.edu.ph', sessionType: 'Follow-up', time: '10:00 AM', date: '08/15/2025' },
-    { id: 8, email: 'carl.garcia@umak.edu.ph', sessionType: 'Counseling', time: '2:00 PM', date: '08/14/2025' },
-    { id: 9, email: 'ana.rivera@umak.edu.ph', sessionType: 'Routine Interview', time: '9:00 AM', date: '08/12/2025' },
-];
+// Map API agenda to display session type
+const mapAgendaToSessionType = (agenda: string): Consultation['sessionType'] => {
+  switch (agenda) {
+    case 'counseling':
+      return 'Counseling';
+    case 'routine_interview':
+      return 'Routine Interview';
+    case 'meeting':
+      return 'Meeting';
+    case 'event':
+      return 'Event';
+    default:
+      return 'Counseling';
+  }
+};
 
 // Map Session Types to Tailwind Badge Colors
 const getBadgeClasses = (type: Consultation['sessionType']) => {
   switch (type) {
     case 'Counseling':
-      return 'bg-teal-400 text-teal-900'; // Similar to bright cyan/teal in the image
+      return 'bg-teal-400 text-teal-900';
     case 'Routine Interview':
-      return 'bg-indigo-600 text-indigo-100'; // Similar to deep purple in the image
-    case 'Follow-up':
-      return 'bg-gray-400 text-gray-800';
+      return 'bg-indigo-600 text-indigo-100';
+    case 'Meeting':
+      return 'bg-purple-500 text-purple-100';
+    case 'Event':
+      return 'bg-pink-500 text-pink-100';
     default:
       return 'bg-gray-200 text-gray-800';
   }
 };
 
-/**
- * A self-contained component for displaying upcoming and previous consultations in a table.
- */
 const ConsultationsTable: React.FC = () => {
+  const { data: session } = useSession();
+  const accessToken = session?.counselorToken || session?.adminToken;
+
   const [activeTab, setActiveTab] = useState<'upcoming' | 'previous'>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  // State for sorting preference (Restored)
   const [sortBy, setSortBy] = useState<SortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const displayData = activeTab === 'upcoming' ? mockUpcomingData : mockPreviousData;
+  // Fetch appointments on mount
+  useEffect(() => {
+    if (accessToken) {
+      fetchAppointments();
+    }
+  }, [accessToken]);
+
+  const fetchAppointments = async () => {
+    if (!accessToken) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Fetch appointments from the past 6 months to future 1 year
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 6);
+      const endDate = new Date();
+      endDate.setFullYear(endDate.getFullYear() + 1);
+
+      const result = await getCounselorConfirmedAppointments(
+        accessToken,
+        startDate.toISOString(),
+        endDate.toISOString()
+      );
+
+      if (result.success && result.data) {
+        const transformedData: Consultation[] = result.data.map((appointment: Appointment) => {
+          const startTime = new Date(appointment.start_time);
+          const date = startTime.toLocaleDateString('en-US', { 
+            month: '2-digit', 
+            day: '2-digit', 
+            year: 'numeric' 
+          });
+          const time = startTime.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+
+          // Extract student email - placeholder for now
+          const email = `student-${appointment.student_id.substring(0, 8)}@umak.edu.ph`;
+
+          return {
+            id: appointment.appointment_id,
+            email,
+            sessionType: mapAgendaToSessionType(appointment.agenda),
+            time,
+            date,
+            rawDate: startTime,
+          };
+        });
+
+        setConsultations(transformedData);
+      } else {
+        setError(result.message || 'Failed to load consultations');
+      }
+    } catch (err) {
+      console.error('Error fetching consultations:', err);
+      setError('Failed to load consultations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Split consultations into upcoming and previous
+  const now = new Date();
+  const upcomingConsultations = consultations.filter(c => c.rawDate >= now);
+  const previousConsultations = consultations.filter(c => c.rawDate < now);
+
+  const displayData = activeTab === 'upcoming' ? upcomingConsultations : previousConsultations;
+  
   let filteredData = displayData.filter(c => 
     c.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.sessionType.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // --- Sorting Logic (Applied in memory, Restored) ---
+  // Sorting Logic
   const sortedData = [...filteredData].sort((a, b) => {
     let comparison = 0;
     
@@ -73,17 +151,12 @@ const ConsultationsTable: React.FC = () => {
       if (emailA > emailB) comparison = 1;
       else if (emailA < emailB) comparison = -1;
     } else if (sortBy === 'date') {
-      // NOTE: For simplicity, converting MM/DD/YYYY to Date object for comparison
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      if (dateA > dateB) comparison = 1;
-      else if (dateA < dateB) comparison = -1;
+      if (a.rawDate > b.rawDate) comparison = 1;
+      else if (a.rawDate < b.rawDate) comparison = -1;
     }
 
-    // Apply direction (descending reverses the comparison result)
     return sortDirection === 'desc' ? comparison * -1 : comparison;
   });
-  // --- End Sorting Logic ---
 
   const TabButton: React.FC<{ tab: 'upcoming' | 'previous', label: string }> = ({ tab, label }) => {
     const isActive = activeTab === tab;
@@ -101,18 +174,16 @@ const ConsultationsTable: React.FC = () => {
     );
   };
   
-  // Handle Filter Change (Restored)
   const handleSortChange = (key: SortKey, direction: SortDirection) => {
-      setSortBy(key);
-      setSortDirection(direction);
-      setIsFilterOpen(false); // Close dropdown after selection
+    setSortBy(key);
+    setSortDirection(direction);
+    setIsFilterOpen(false);
   };
 
   const getSortIcon = (key: SortKey) => {
-      if (sortBy !== key) return null;
-      return sortDirection === 'asc' ? ' (A-Z)' : ' (Z-A)';
-  }
-
+    if (sortBy !== key) return null;
+    return sortDirection === 'asc' ? ' (A-Z)' : ' (Z-A)';
+  };
 
   return (
     <div className="flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md">
@@ -129,7 +200,7 @@ const ConsultationsTable: React.FC = () => {
           </div>
         </div>
         
-        {/* Search and Filter (Restored Filter Dropdown UI) */}
+        {/* Search and Filter */}
         <div className="flex items-center space-x-3 w-full lg:w-auto">
           <div className="relative flex-1">
             <input
@@ -154,86 +225,93 @@ const ConsultationsTable: React.FC = () => {
             
             {/* Dropdown Content */}
             {isFilterOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-20 overflow-hidden">
-                    <div className="p-3 font-bold text-xs text-gray-700 uppercase border-b">Sort By</div>
-                    
-                    {/* Sort by Date Button */}
-                    <button
-                        // Toggles direction (Newest/Oldest) on the date column
-                        onClick={() => handleSortChange('date', sortBy === 'date' && sortDirection === 'desc' ? 'asc' : 'desc')}
-                        className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                        <span className="flex items-center"><AiOutlineCalendar className="mr-2" /> Date</span>
-                        <span className="text-xs font-semibold text-blue-600">
-                            {sortBy === 'date' ? (sortDirection === 'desc' ? 'Newest ⬇️' : 'Oldest ⬆️') : 'Sort'}
-                        </span>
-                    </button>
+              <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-20 overflow-hidden">
+                <div className="p-3 font-bold text-xs text-gray-700 uppercase border-b">Sort By</div>
+                
+                <button
+                  onClick={() => handleSortChange('date', sortBy === 'date' && sortDirection === 'desc' ? 'asc' : 'desc')}
+                  className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <span className="flex items-center"><AiOutlineCalendar className="mr-2" /> Date</span>
+                  <span className="text-xs font-semibold text-blue-600">
+                    {sortBy === 'date' ? (sortDirection === 'desc' ? 'Newest ⬇️' : 'Oldest ⬆️') : 'Sort'}
+                  </span>
+                </button>
 
-                    {/* Sort by Email Button */}
-                    <button
-                        // Toggles direction (A-Z/Z-A) on the email column
-                        onClick={() => handleSortChange('email', sortBy === 'email' && sortDirection === 'asc' ? 'desc' : 'asc')}
-                        className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                        <span className="flex items-center"><AiOutlineSortAscending className="mr-2" /> Email</span>
-                        <span className="text-xs font-semibold text-blue-600">
-                             {sortBy === 'email' ? getSortIcon('email') : 'Sort'}
-                        </span>
-                    </button>
-                    
-                    <div className="p-3 font-bold text-xs text-gray-700 uppercase border-t mt-1">
-                        Current Sort: {sortBy.charAt(0).toUpperCase() + sortBy.slice(1)} ({sortDirection === 'desc' ? 'Desc' : 'Asc'})
-                    </div>
+                <button
+                  onClick={() => handleSortChange('email', sortBy === 'email' && sortDirection === 'asc' ? 'desc' : 'asc')}
+                  className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <span className="flex items-center"><AiOutlineSortAscending className="mr-2" /> Email</span>
+                  <span className="text-xs font-semibold text-blue-600">
+                    {sortBy === 'email' ? getSortIcon('email') : 'Sort'}
+                  </span>
+                </button>
+                
+                <div className="p-3 font-bold text-xs text-gray-700 uppercase border-t mt-1">
+                  Current Sort: {sortBy.charAt(0).toUpperCase() + sortBy.slice(1)} ({sortDirection === 'desc' ? 'Desc' : 'Asc'})
                 </div>
+              </div>
             )}
           </div>
         </div>
       </div>
 
+      {/* Loading & Error States */}
+      {loading && (
+        <div className="text-center py-8 text-gray-500">
+          Loading consultations...
+        </div>
+      )}
+
+      {error && (
+        <div className="text-center py-8 text-red-500">
+          {error}
+        </div>
+      )}
+
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Session Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Time</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Date</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {sortedData.length === 0 ? (
+      {!loading && !error && (
+        <div className="overflow-x-auto rounded-xl">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Session Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Time</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Date</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {sortedData.length === 0 ? (
                 <tr>
-                    <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-center text-gray-500 text-sm">
-                        No {activeTab} consultations found.
-                    </td>
+                  <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-center text-gray-500 text-sm">
+                    No {activeTab} consultations found.
+                  </td>
                 </tr>
-            ) : (
+              ) : (
                 sortedData.map((consultation) => (
-                    <tr key={consultation.id} className="hover:bg-gray-50 transition-colors">
-                        {/* Email */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{consultation.email}</td>
-                        
-                        {/* Session Type Badge */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <span 
-                                className={`inline-flex items-center px-4 py-1 rounded-full text-xs font-semibold uppercase ${getBadgeClasses(consultation.sessionType)}`}
-                            >
-                                {consultation.sessionType}
-                            </span>
-                        </td>
-                        
-                        {/* Time */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{consultation.time}</td>
-                        
-                        {/* Date */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{consultation.date}</td>
-                    </tr>
+                  <tr key={consultation.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{consultation.email}</td>
+                    
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span 
+                        className={`inline-flex items-center px-4 py-1 rounded-full text-xs font-semibold uppercase ${getBadgeClasses(consultation.sessionType)}`}
+                      >
+                        {consultation.sessionType}
+                      </span>
+                    </td>
+                    
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{consultation.time}</td>
+                    
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{consultation.date}</td>
+                  </tr>
                 ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

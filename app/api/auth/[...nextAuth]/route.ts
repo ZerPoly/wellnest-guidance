@@ -138,6 +138,13 @@ export const authOptions: NextAuthOptions = {
       session.user.role = token.role;
       session.user.accessToken = token.accessToken;
       
+      // ⬇️ ADDED: Set role-specific tokens ⬇️
+      if (token.role === 'counselor') {
+        session.counselorToken = token.accessToken as string;
+      } else if (token.role === 'admin' || token.role === 'super_admin') {
+        session.adminToken = token.accessToken as string;
+      }
+      
       if (token.error) {
         session.error = token.error;
       }
@@ -159,4 +166,3 @@ export const authOptions: NextAuthOptions = {
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
-
