@@ -90,7 +90,7 @@ export default function PendingRequestsModal({
 
 
   return (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-9998 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/30 backdrop-blur"
         onClick={onClose}

@@ -13,7 +13,7 @@ interface CalendarComponentProps {
   onDayClick: (date: string, agendas: AgendaData[]) => void;
   onMonthYearChange?: (month: number, year: number) => void;
   onViewRequests: () => void;
-  pendingCount?: number; // Added this prop
+  hasPending?: boolean; // matched prop name from parent
 }
 
 export default function CalendarComponent({ 
@@ -24,7 +24,7 @@ export default function CalendarComponent({
   onDayClick,
   onViewRequests,
   onMonthYearChange,
-  pendingCount = 0 // Default value
+  hasPending = false // default to false
 }: CalendarComponentProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -96,7 +96,7 @@ export default function CalendarComponent({
     return agendas.filter(a => a.date === dateStr);
   };
 
-  const handleDayClick = (day: number, e: React.MouseEvent) => {
+  const handleDayInternalClick = (day: number) => {
     const dateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const dayAgendas = getAgendasForDate(day);
     
@@ -153,9 +153,9 @@ export default function CalendarComponent({
             ? 'cursor-not-allowed' 
             : 'cursor-pointer hover:bg-purple-50'
         }`}
-        onClick={(e) => {
+        onClick={() => {
           if (!isDateDisabled) {
-            handleDayClick(day, e);
+            handleDayInternalClick(day);
           }
         }}
       >
@@ -234,13 +234,12 @@ export default function CalendarComponent({
           <button
             onClick={onViewRequests}
             title="View Pending Requests"
-            // ADDED 'relative' here
             className="relative p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
           >
             <Inbox size={20} />
-            {/* RED DOT LOGIC ADDED HERE */}
-            {pendingCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm pointer-events-none" />
+            {/* fixed red dot logic */}
+            {hasPending && (
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm pointer-events-none animate-pulse" />
             )}
           </button>
 

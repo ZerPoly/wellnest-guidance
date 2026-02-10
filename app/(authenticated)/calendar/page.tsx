@@ -1,11 +1,11 @@
-// app/(authenticated)/calendar/page.tsx
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
+import Link from "next/link";
 
-// --- UI Components ---
+// ui components
 import CalendarComponent from '@/components/calendar/CalendarComponent';
 import AgendaComponent from '@/components/calendar/AgendaComponent';
 import CounselorAgendaModal from '@/components/calendar/CounselorAgendaModal';
@@ -14,7 +14,7 @@ import DayAgendasModal from '@/components/calendar/DayAgendasModal';
 import PendingRequestsModal from '@/components/calendar/PendingRequestsModal'; 
 import { AgendaData } from '@/components/types/agenda.types';
 
-// --- API Client ---
+// api client
 import {
   getCounselorConfirmedAppointments,
 } from '@/lib/api/appointments/counselorAppointments';
@@ -30,7 +30,7 @@ import {
   StudentsListResponse,
 } from '@/lib/api/appointments/students';
 
-// --- Mappers ---
+// mappers
 import {
   appointmentToAgenda,
   requestToAgenda,
@@ -38,25 +38,21 @@ import {
   getMonthDateRange,
 } from '@/lib/utils/appointmentMappers';
 
-export default function CounselorAppointmentsPage() {
+const CalendarClient = () => {
   const { data: session } = useSession();
   
-  // --- Data State ---
+  // data state
   const [students, setStudents] = useState<Student[]>([]);
   const [studentMap, setStudentMap] = useState<Map<string, Student>>(new Map());
-  
-  // ⬇️ --- FIX: Split state per developer's request --- ⬇️
-  // This list is JUST for the CalendarComponent (grid)
   const [calendarAgendas, setCalendarAgendas] = useState<AgendaData[]>([]);
-  // This list is for the AgendaComponent (list)
   const [listAgendas, setListAgendas] = useState<AgendaData[]>([]);
   
-  // --- Page State ---
+  // page state
   const [isLoading, setIsLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-  // --- Modal States ---
+  // modal states
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
   const [isDayModalOpen, setDayModalOpen] = useState(false);
@@ -67,7 +63,12 @@ export default function CounselorAppointmentsPage() {
   const [selectedDayAgendas, setSelectedDayAgendas] = useState<AgendaData[]>([]);
   const [selectedDayDate, setSelectedDayDate] = useState<string>("");
 
-  // 1. Fetch Students
+  // check if there are any pending requests for the red dot indicator
+  const hasPending = useMemo(() => {
+    return listAgendas.some(agenda => agenda.status === 'pending');
+  }, [listAgendas]);
+
+  // fetch students
   useEffect(() => {
     if (session?.user?.accessToken) {
       const fetchAllStudents = async () => {
@@ -85,70 +86,51 @@ export default function CounselorAppointmentsPage() {
               cursor = pageData.nextCursor || undefined;
               hasMore = pageData.hasMore && !!pageData.nextCursor;
             } else {
-              toast.error(res.message || 'Failed to fetch students.');
+              toast.error(res.message || 'failed to fetch students.');
               hasMore = false;
             }
           }
           setStudents(allStudents);
 
           const newMap = new Map<string, Student>();
-          let badStudentDataCount = 0;
           allStudents.forEach(s => {
             if (s && s.student_id) {
               newMap.set(s.student_id, s); 
-            } else {
-              console.warn('[StudentMap] Ignoring bad student data:', s);
-              badStudentDataCount++;
             }
           });
-          
-          if (badStudentDataCount > 0) {
-            console.error(`[StudentMap] Ignored ${badStudentDataCount} students with missing user_id.`);
-          }
           setStudentMap(newMap);
-
         } catch (error) {
-          console.error(error);
-          toast.error('An error occurred while fetching students.');
+          toast.error('an error occurred while fetching students.');
         }
       };
       fetchAllStudents();
     }
   }, [session]);
 
-  // 2. Fetch Appointments & Requests
+  // fetch appointments and requests
   const fetchData = async () => {
-    if (!session?.user?.accessToken || studentMap.size === 0) {
-      return;
-    }
+    if (!session?.user?.accessToken || studentMap.size === 0) return;
 
     setIsLoading(true);
     const { startDate, endDate } = getMonthDateRange(currentYear, currentMonth);
     const token = session.user.accessToken;
 
     try {
-      // --- ⬇️ FIX: Using the student-side logic ⬇️ ---
-      const [
-        appointmentsRes, 
-        requestsRes
-      ] = await Promise.all([
-        getCounselorConfirmedAppointments(token, startDate, endDate), // 1. Gets "Confirmed"
-        getCounselorAppointmentRequests(token),                      // 2. Gets ALL requests
+      const [appointmentsRes, requestsRes] = await Promise.all([
+        getCounselorConfirmedAppointments(token, startDate, endDate),
+        getCounselorAppointmentRequests(token),
       ]);
-      // --- ⬆️ END OF FIX ⬆️ ---
 
       const confirmedAgendas: AgendaData[] = [];
       const pendingAgendas: AgendaData[] = [];
       const declinedAgendas: AgendaData[] = [];
 
-      // 1. Process "Accepted" (Confirmed) appointments
       if (appointmentsRes.success && appointmentsRes.data) {
         appointmentsRes.data.forEach(app => {
           confirmedAgendas.push(appointmentToAgenda(app, studentMap));
         });
       }
 
-      // 2. Process all "Requests"
       if (requestsRes.success && requestsRes.data) {
         requestsRes.data.forEach(req => {
           if (req.status === 'pending') {
@@ -156,55 +138,28 @@ export default function CounselorAppointmentsPage() {
           } else if (req.status === 'declined') {
             declinedAgendas.push(requestToAgenda(req, studentMap));
           }
-          // "both_confirmed" requests are ignored, solving the duplicate bug
         });
       }
 
-      // De-duplicate just in case
-      const confirmedMap = new Map<string | number, AgendaData>();
-      confirmedAgendas.forEach(agenda => confirmedMap.set(agenda.id, agenda));
-      const uniqueConfirmed = Array.from(confirmedMap.values());
-
-      const pendingMap = new Map<string | number, AgendaData>();
-      pendingAgendas.forEach(agenda => pendingMap.set(agenda.id, agenda));
-      const uniquePending = Array.from(pendingMap.values());
-      
-      const declinedMap = new Map<string | number, AgendaData>();
-      declinedAgendas.forEach(agenda => declinedMap.set(agenda.id, agenda));
-      const uniqueDeclined = Array.from(declinedMap.values());
-
-      // Set the state for the two components
-      // The Calendar ONLY gets confirmed appointments
-      setCalendarAgendas(uniqueConfirmed);
-      
-      // The Agenda List gets EVERYTHING
-      setListAgendas([...uniqueConfirmed, ...uniquePending, ...uniqueDeclined]);
-
-    } catch (error: any) { 
-      toast.error('Failed to fetch schedule.');
-      console.error(error);
+      setCalendarAgendas(confirmedAgendas);
+      setListAgendas([...confirmedAgendas, ...pendingAgendas, ...declinedAgendas]);
+    } catch (error) { 
+      toast.error('failed to fetch schedule.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Re-fetch data when session, studentMap, or month/year changes
   useEffect(() => {
     fetchData();
   }, [session, currentMonth, currentYear, studentMap]);
 
-  // --- Modal Open/Close Handlers ---
+  // modal handlers
   const handleCreateAgenda = () => {
     setPrefilledDate(null);
     setCreateModalOpen(true);
   };
   
-  const handleCreateAgendaForDay = () => {
-    setPrefilledDate(selectedDayDate);
-    setCreateModalOpen(true);
-    setDayModalOpen(false);
-  };
-
   const handleDateClick = (date: string) => {
     setPrefilledDate(date);
     setCreateModalOpen(true);
@@ -227,82 +182,51 @@ export default function CounselorAppointmentsPage() {
     }
   };
 
-  const handleViewRequests = () => {
-    console.log('[page.tsx] handleViewRequests: Opening requests modal...');
-    setRequestsModalOpen(true);
-  };
-
   const closeModal = () => {
     setCreateModalOpen(false);
     setDetailsModalOpen(false);
     setDayModalOpen(false);
     setRequestsModalOpen(false);
-    
     setSelectedAgenda(null);
     setPrefilledDate(null);
-    setSelectedDayAgendas([]);
-    setSelectedDayDate("");
   };
 
-  // --- API Action Handlers ---
   const handleSave = async (formData: any) => {
     if (!session?.user?.accessToken) return;
-    if (!formData.studentId) {
-        toast.error('Validation Failed: Please select a student.');
-        return;
-    }
     const payload = counselorAgendaFormToApiPayload(formData);
-    const toastId = toast.loading('Sending request...');
+    const toastId = toast.loading('sending request...');
     const res = await createCounselorAppointmentRequest(payload, session.user.accessToken);
-    if (res.success && res.data) {
-      toast.success('Appointment request sent!', { id: toastId });
-      fetchData(); // Refresh data
+    if (res.success) {
+      toast.success('appointment request sent!', { id: toastId });
+      fetchData();
       closeModal();
     } else {
-      toast.error(`Error: ${res.message}`, { id: toastId });
+      toast.error(`error: ${res.message}`, { id: toastId });
     }
   };
 
   const handleAccept = async (agenda: AgendaData) => {
     if (!session?.user?.accessToken || !agenda.request_id) return;
     const res = await acceptCounselorAppointmentRequest(agenda.request_id.toString(), session.user.accessToken);
-    if (res.success && res.data) {
-      toast.success('Appointment accepted and confirmed!');
-      fetchData(); // Refresh data
+    if (res.success) {
+      toast.success('appointment accepted and confirmed!');
+      fetchData();
       closeModal();
-    } else {
-      toast.error(`Error accepting: ${res.message}`);
     }
   };
 
   const handleDecline = async (agenda: AgendaData) => {
     if (!session?.user?.accessToken || !agenda.request_id) return;
     const res = await declineCounselorAppointmentRequest(agenda.request_id.toString(), session.user.accessToken);
-    if (res.success && res.data) {
-      toast.warning('Appointment request declined.');
-      fetchData(); // Refresh data
+    if (res.success) {
+      toast.warning('appointment request declined.');
+      fetchData();
       closeModal();
-    } else {
-      toast.error(`Error declining: ${res.message}`);
     }
   };
-  
-  const handleCancel = async (agenda: AgendaData) => {
-    toast.info('Cancel feature not yet implemented.');
-  };
-
-  // --- Memoized Props ---
-  const studentOptions = useMemo(() => {
-    return students.map(s => ({ 
-      id: s.student_id, 
-      name: s.email
-    }));
-  }, [students]);
 
   const initialCreateData = useMemo(() => {
-    if (!prefilledDate) {
-      return undefined;
-    }
+    if (!prefilledDate) return undefined;
     return {
       date: prefilledDate,
       type: 'counseling' as 'counseling' | 'routine_interview',
@@ -312,42 +236,56 @@ export default function CounselorAppointmentsPage() {
     };
   }, [prefilledDate]);
 
-  // --- Render ---
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">My Schedule</h1>
-      
-      {isLoading && <p>Loading schedule...</p>}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          {/* ⬇️ FIX: Pass the correct state ⬇️ */}
-          <CalendarComponent
-            agendas={calendarAgendas}
-            onDateClick={handleDateClick}
-            onAgendaClick={handleAgendaClick}
-            onCreateAgenda={handleCreateAgenda}
-            onDayClick={handleDayClick}
-            onMonthYearChange={(month, year) => {
-              setCurrentMonth(month);
-              setCurrentYear(year);
-            }}
-            onViewRequests={handleViewRequests}
-          />
+    <div className="flex flex-col h-full">
+      {/* breadcrumb and title */}
+      <div className="mb-4">
+        <div className="flex flex-row space-x-1">
+          <Link href="/dashboard" className="font-extrabold text-(--text-muted) hover:text-(--title) transition-colors">
+            Dashboard
+          </Link>
+          <span className="font-regular text-(--text-muted)">
+            / Calendar
+          </span>
         </div>
-        
-        <div className="lg:col-span-1">
-          {/* ⬇️ FIX: Pass the correct state ⬇️ */}
-          <AgendaComponent
-            agendas={listAgendas}
-            onAgendaClick={handleAgendaClick}
-            onCreateAgenda={handleCreateAgenda}
-          />
+        <div>
+          <h1 className="text-3xl font-extrabold text-(--title) hidden sm:block">
+            Calendar
+          </h1>
         </div>
       </div>
 
-      {/* --- Modals --- */}
-      
+      <div className="flex flex-col flex-1 min-w-0">
+        {isLoading && <p className="text-sm text-gray-500 animate-pulse mb-2">Loading Schedule...</p>}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
+          <div className="lg:col-span-2">
+            <CalendarComponent
+              agendas={calendarAgendas}
+              onDateClick={handleDateClick}
+              onAgendaClick={handleAgendaClick}
+              onCreateAgenda={handleCreateAgenda}
+              onDayClick={handleDayClick}
+              onMonthYearChange={(month, year) => {
+                setCurrentMonth(month);
+                setCurrentYear(year);
+              }}
+              onViewRequests={() => setRequestsModalOpen(true)}
+              hasPending={hasPending} // pass the derived state here
+            />
+          </div>
+          
+          <div className="lg:col-span-1">
+            <AgendaComponent
+              agendas={listAgendas}
+              onAgendaClick={handleAgendaClick}
+              onCreateAgenda={handleCreateAgenda}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* modals */}
       <CounselorAgendaModal
         isOpen={isCreateModalOpen}
         onClose={closeModal}
@@ -363,7 +301,6 @@ export default function CounselorAppointmentsPage() {
         onClose={closeModal}
         onAccept={handleAccept}
         onDecline={handleDecline}
-        // onCancel is correctly removed
       />
       
       <DayAgendasModal
@@ -372,16 +309,21 @@ export default function CounselorAppointmentsPage() {
         date={selectedDayDate}
         agendas={selectedDayAgendas}
         onAgendaClick={handleAgendaClick}
-        onCreateAgenda={handleCreateAgendaForDay}
+        onCreateAgenda={() => {
+          setPrefilledDate(selectedDayDate);
+          setCreateModalOpen(true);
+          setDayModalOpen(false);
+        }}
       />
 
       <PendingRequestsModal
         isOpen={isRequestsModalOpen}
         onClose={closeModal}
-        agendas={listAgendas} // Pass the full list
+        agendas={listAgendas}
         onAgendaClick={handleAgendaClick}
       />
-
     </div>
   );
-}
+};
+
+export default CalendarClient;
