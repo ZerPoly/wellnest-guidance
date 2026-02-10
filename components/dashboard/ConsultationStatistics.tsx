@@ -144,8 +144,8 @@ const ConsultationStatistics: React.FC<ConsultationStatisticsProps> = ({ timeFil
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="p-3 bg-[var(--bg-light)] border border-[var(--border)] rounded-lg shadow-xl text-sm">
-          <p className="font-bold text-[var(--title)] mb-1">{data.date} ({label})</p>
+        <div className="p-3 bg-(--bg-light) border border-(--border) rounded-lg shadow-xl text-sm">
+          <p className="font-bold text-(--title) mb-1">{data.date} ({label})</p>
           <p style={{ color: primaryColor }}>
             {`Total Volume: ${payload[0].value}`}
           </p>
@@ -156,10 +156,10 @@ const ConsultationStatistics: React.FC<ConsultationStatisticsProps> = ({ timeFil
   };
 
   return (
-    <div className="flex-1 border border-[var(--outline)] h-full bg-[var(--bg)] p-4 rounded-2xl shadow-md flex flex-col">
+    <div className="flex-1 border border-(--outline) h-full bg-(--bg) p-4 rounded-2xl shadow-md flex flex-col">
       
       {/* Title */}
-      <h2 className="text-xl font-bold text-[var(--text-muted)] mb-4">{CHART_TITLE}</h2>
+      <h2 className="text-xl font-bold text-(--text-muted) mb-4">{CHART_TITLE}</h2>
       
       {/* Loading State */}
       {loading && (

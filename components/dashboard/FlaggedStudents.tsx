@@ -18,12 +18,16 @@ const CLASSIFICATION_COLORS: Record<StudentClassification['classification'], str
 };
 
 const CHART_TITLE = "Student Classification Summary";
-const CHART_HEIGHT = 350; 
 
 interface ChartDataPoint {
   name: string;
   value: number;
   fill: string;
+}
+
+// update: interface added to handle the incoming timeframe prop
+interface FlaggedStudentsProps {
+  timeFilter: string;
 }
 
 const aggregateDataForPie = (classifications: StudentClassification[]): ChartDataPoint[] => {
@@ -54,7 +58,8 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export default function FlaggedStudents() {
+// update: component now accepts timefilter prop
+export default function FlaggedStudents({ timeFilter }: FlaggedStudentsProps) {
   const { data: session } = useSession();
   const token = session?.user?.accessToken;
 
@@ -76,18 +81,19 @@ export default function FlaggedStudents() {
     setError(null);
     
     try {
+      // note: you can use timefilter here to adjust your api call if needed
       const result: FetchStudentsResponse = await fetchStudents(token, { limit: 500 });
       if (result.success && result.data?.classifications) {
         setChartData(aggregateDataForPie(result.data.classifications));
       } else {
-        setError(result.message || "Failed to load student data.");
+        setError(result.message || "failed to load student data.");
       }
     } catch (err) {
-      setError("Network Error: Could not connect to the API server.");
+      setError("network error: could not connect to the api server.");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, timeFilter]);
 
   React.useEffect(() => {
     fetchData();
@@ -95,22 +101,27 @@ export default function FlaggedStudents() {
 
   if (loading) {
     return (
-      <div className="flex-1 border border-[var(--outline)] bg-[var(--bg)] p-4 rounded-2xl shadow-md flex items-center justify-center min-h-[350px]">
-        <p className="text-gray-500 font-medium">Loading Classification Data...</p>
+      <div className="flex-1 border border-(--outline) bg-(--bg) p-4 rounded-2xl shadow-md flex items-center justify-center min-h-[350px]">
+        <p className="text-gray-500 font-medium">loading classification data...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col flex-1 border border-[var(--outline)] bg-[var(--bg)] p-6 rounded-2xl shadow-md min-h-[350px]">
+    <div className="flex flex-col flex-1 border border-(--outline) bg-(--bg) p-6 rounded-2xl shadow-md min-h-[350px]">
       <header className="mb-2">
-        <h2 className="text-xl font-bold text-[var(--text-muted)]">{CHART_TITLE}</h2>
-        <p className="text-sm text-[var(--text-muted)]">Total: {TOTAL_STUDENTS.toLocaleString()} Students</p>
+        <h2 className="text-xl font-bold text-(--text-muted)">{CHART_TITLE}</h2>
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-(--text-muted)">Total: {TOTAL_STUDENTS.toLocaleString()} Students</p>
+          <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
+            {timeFilter}
+          </span>
+        </div>
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center">
         {TOTAL_STUDENTS === 0 ? (
-          <p className="text-gray-500 font-medium italic">No student data available to visualize.</p>
+          <p className="text-gray-500 font-medium italic">no student data available to visualize.</p>
         ) : (
           <>
             <div className="w-full h-[220px]">
@@ -135,10 +146,10 @@ export default function FlaggedStudents() {
                         const { cx, cy } = viewBox;
                         return (
                           <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central">
-                            <tspan x={cx} y={cy - 5} className="fill-[var(--title)] text-3xl font-bold">
+                            <tspan x={cx} y={cy - 5} className="fill-(--title) text-3xl font-bold">
                               {TOTAL_STUDENTS}
                             </tspan>
-                            <tspan x={cx} y={cy + 20} className="fill-[var(--text-muted)] text-sm font-medium">
+                            <tspan x={cx} y={cy + 20} className="fill-(--text-muted) text-sm font-medium">
                               Total Students
                             </tspan>
                           </text>
@@ -158,7 +169,7 @@ export default function FlaggedStudents() {
                     style={{ backgroundColor: entry.fill }} 
                   />
                   <span 
-                    className="text-sm font-semibold text-[var(--text-muted)]"
+                    className="text-sm font-semibold text-(--text-muted)"
                   >
                     {entry.name}
                   </span>
@@ -169,9 +180,9 @@ export default function FlaggedStudents() {
         )}
       </div>
 
-      <footer className="pt-4 mt-4 border-t border-[var(--outline)]">
-        <div className="flex items-center gap-2 text-sm font-medium text-[var(--text-muted)]">
-          <span>Aggregated data from {TOTAL_STUDENTS} students.</span>
+      <footer className="pt-4 mt-4 border-t border-(--outline)">
+        <div className="flex items-center gap-2 text-sm font-medium text-(--text-muted)">
+          <span>aggregated data from {TOTAL_STUDENTS} students.</span>
           <TrendingUp className="h-4 w-4" /> 
         </div>
       </footer>

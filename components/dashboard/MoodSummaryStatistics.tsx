@@ -43,11 +43,11 @@ const MoodSummaryStatistics = () => {
   if (!mounted) return <div className="min-h-[350px] animate-pulse bg-gray-100 rounded-2xl" />;
 
   return (
-    <div className="flex flex-col border border-[var(--outline)] bg-[var(--bg)] p-6 rounded-2xl shadow-md min-h-[350px]">
+    <div className="flex flex-col border border-(--outline) bg-(--bg) p-6 rounded-2xl shadow-md min-h-[350px]">
       {/* Header with Filter */}
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-xl font-bold text-[var(--text-muted)]">Student Sentiment</h2>
+          <h2 className="text-xl font-bold text-(--text-muted)">Student Sentiment</h2>
           <p className="text-sm text-gray-500">
             {view === 'weekly' ? 'Daily frequency tracking' : 'Monthly aggregate volume'}
           </p>
