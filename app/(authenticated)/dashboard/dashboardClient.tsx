@@ -10,6 +10,7 @@ import ConsultationVolumeBox from '@/components/dashboard/ConsultationStatistics
 import FlaggedStudents from "@/components/dashboard/FlaggedStudents";
 import ConsultationsTable from "@/components/dashboard/ConsultationTable"; 
 import FilterDropdown from "@/components/dashboard/FilterDropdown"; 
+import MoodSummaryStatistics from "@/components/dashboard/MoodSummaryStatistics";
 
 
 // --- Placeholder Filter Types (Mandatory for compilation) ---
@@ -79,6 +80,7 @@ const DashboardContent = ({}: DashboardContentProps) => {
           <FlaggedStudents timeFilter={chartFilter} />
         </div>
       </div>
+      <MoodSummaryStatistics />
 
       {/* Consultation Table Section */}
       <div className="my-6">
