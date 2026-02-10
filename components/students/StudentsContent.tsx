@@ -244,7 +244,7 @@ const StudentsContent: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
+      {/* search bar */}
       <div className="flex gap-4">
         <input
           type="text"
@@ -255,44 +255,68 @@ const StudentsContent: React.FC = () => {
         />
       </div>
 
-      {/* Filter Controls */}
-      <div className="flex justify-between items-center">
-        <p className="text-gray-600">
-          <span className="font-bold text-gray-800">
-            {filteredStudents.length}
-          </span>{" "}
-          students displayed
+      {/* filter controls parent container */}
+      <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4">
+        {/* showing N students */}
+        <p className="text-sm text-(--text-muted)">
+          Showing <span className="font-bold text-(--title)">{filteredStudents.length}</span> students
         </p>
+
+        {/* filter dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowFilter(!showFilter)}
-            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm ${
-              statusFilter !== "All" ? "text-teal-600" : "text-gray-700"
+            className={`flex items-center gap-2 px-4 py-2 bg-white border rounded-xl transition-all shadow-sm hover:border-purple-400 focus:ring-2 focus:ring-purple-100 ${
+              statusFilter !== "All" ? "border-purple-500 text-purple-700" : "border-gray-300 text-gray-700"
             }`}
           >
-            <AiOutlineFilter className="w-4 h-4" />
-            <span>
+            <AiOutlineFilter className={`w-4 h-4 ${statusFilter !== "All" ? "text-purple-600" : "text-gray-500"}`} />
+            <span className="text-sm font-semibold">
               Filter: {statusFilter === "InCrisis" ? "In-Crisis" : statusFilter}
             </span>
+            <svg 
+              className={`w-4 h-4 ml-1 transition-transform duration-200 ${showFilter ? 'rotate-180' : ''}`} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
+
           {showFilter && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-10">
-              <ul className="py-1">
-                {filterOptions.map((option) => (
-                  <li key={option}>
+            <>
+              {/* Transparent overlay to close dropdown when clicking outside */}
+              <div 
+                className="fixed inset-0 z-10" 
+                onClick={() => setShowFilter(false)} 
+              />
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                {filterOptions.map((option) => {
+                  const isActive = statusFilter === option;
+                  const label = option === "InCrisis" ? "In-Crisis" : option;
+                  return (
                     <button
+                      key={option}
                       onClick={() => {
                         setStatusFilter(option);
                         setShowFilter(false);
                       }}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className={`flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors ${
+                        isActive 
+                          ? "bg-purple-50 text-purple-700 font-bold" 
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
                     >
-                      {option === "InCrisis" ? "In-Crisis" : option}
+                      {label}
+                      {isActive && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                      )}
                     </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -301,30 +325,29 @@ const StudentsContent: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {filteredStudents.length > 0 ? (
           filteredStudents.map((student) => {
-            const revealed = revealedStudents.includes(student.student_id);
             return (
               <div
                 key={student.student_id}
                 className="bg-white shadow-md rounded-2xl p-6 flex flex-col items-center text-center transition-transform hover:scale-105 hover:shadow-lg"
               >
                 <StudentAvatar classification={student.classification} />
+                
                 <p className="font-bold text-lg text-gray-800">
-                  {maskEmail(student.email, revealed)}
+                  {/* Always mask by default; redirection handles the 'revealed' view */}
+                  {maskEmail(student.email, false)}
                 </p>
+
                 <div className="mt-1 mb-2">
                   {renderStatusText(student.classification)}
                 </div>
+
                 <p className="text-xs text-gray-500 mb-4 truncate w-full">
                   {student.department_name}
                 </p>
 
                 <button
                   onClick={() => handleViewDetails(student)}
-                  className={`w-full font-semibold py-3 px-4 rounded-full transition-all shadow ${
-                    revealed
-                      ? "bg-[#460F9D] hover:bg-[#5E21D2] text-white"
-                      : "bg-[#03BFBF] hover:bg-[#02A4A4] text-white"
-                  }`}
+                  className="w-full font-semibold py-3 px-4 rounded-full transition-all shadow bg-[#03BFBF] hover:bg-[#02A4A4] text-white"
                 >
                   View Details
                 </button>

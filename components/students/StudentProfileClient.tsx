@@ -3,21 +3,13 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns";
 import {
   IoBookOutline,
-  IoCalendarOutline,
   IoSchoolOutline,
+  IoChatbubblesOutline,
+  IoCheckmarkDoneOutline,
+  IoRepeatOutline,
 } from "react-icons/io5";
 import {
   AiOutlineUser,
@@ -26,36 +18,24 @@ import {
   AiOutlineBank,
 } from "react-icons/ai";
 
-import {
-  fetchStudentClassificationByID,
-  StudentApiData,
-} from "@/lib/api/studentClassificationByID";
-import { ALL_EMOTIONS, EMOTION_COLOR_MAP } from "@/data/studentProfileData";
+import { EMOTION_COLOR_MAP, ALL_EMOTIONS } from "@/data/studentProfileData";
 import {
   aggregateMoodData,
   getStatusClasses,
   mapApiDataToProfile,
 } from "@/data/studentProfileHelpers";
 
-// ============================================
-// TYPES
-// ============================================
+import BentoDetailCard from "./BentoDetailCard";
+import MoodCheckInOverview from "./DailyMoodCheckIn";
+import MentalWellBeingStatus from "./MentalWellBeingStatus";
+import AppointmentHistory from "./AppointmentHistory";
 
+// types
 interface StudentProfileClientProps {
   studentId: string;
 }
 
-interface DetailCardProps {
-  icon: React.ElementType;
-  title: string;
-  value: string;
-  colorClass: string;
-}
-
-// ============================================
-// REUSABLE COMPONENTS
-// ============================================
-
+// reusable components
 const CustomMoodTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload || payload.length === 0) return null;
 
@@ -80,37 +60,6 @@ const CustomMoodTooltip = ({ active, payload, label }: any) => {
             {entry.name}: {entry.value}
           </p>
         ))}
-    </div>
-  );
-};
-
-const BentoDetailCard: React.FC<DetailCardProps> = ({
-  icon: Icon,
-  title,
-  value,
-  colorClass,
-}) => {
-  const getIconBgClass = (className: string) =>
-    className.replace("text-", "bg-").replace("-600", "-100");
-
-  return (
-    <div className="flex items-center gap-3 p-4 rounded-xl bg-white shadow-sm border border-gray-200">
-      <div
-        className={`p-3 rounded-full ${getIconBgClass(
-          colorClass
-        )} ${colorClass} flex-shrink-0`}
-      >
-        <Icon size={20} />
-      </div>
-
-      <div className="flex flex-col justify-center flex-grow">
-        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-          {title}
-        </p>
-        <p className={`font-bold text-base ${colorClass} break-words`}>
-          {value}
-        </p>
-      </div>
     </div>
   );
 };
@@ -148,10 +97,6 @@ const ErrorState = ({
   </div>
 );
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
-
 export default function StudentProfileClient({
   studentId,
 }: StudentProfileClientProps) {
@@ -173,17 +118,14 @@ export default function StudentProfileClient({
         return;
       }
 
-      // Check if data already exists from verification
       const cachedData = sessionStorage.getItem(`student_${studentId}`);
 
       if (cachedData) {
         try {
-          console.log("✅ Using cached student data from verification");
           const apiData = JSON.parse(cachedData);
           const mappedProfile = mapApiDataToProfile(apiData);
           setProfile(mappedProfile);
           setLoading(false);
-
           return;
         } catch (e) {
           setError("An unexpected error occurred while loading the profile.");
@@ -192,42 +134,19 @@ export default function StudentProfileClient({
         }
       }
 
-      // No cached data - redirect back to students page
-      console.log("⚠️ No cached data found, redirecting back to students page");
       router.push("/students");
-
-      // Old code na need ng isa pang fetch
-      // try {
-      //   const apiData = await fetchStudentClassificationByID(
-      //     studentId,
-      //     { email: userEmail, password: DUMMY_PASSWORD },
-      //     accessToken
-      //   );
-
-      //   if (apiData) {
-      //     const mappedProfile = mapApiDataToProfile(apiData);
-      //     setProfile(mappedProfile);
-      //   } else {
-      //     setError(
-      //       "Failed to load profile: Insufficient permissions or data error."
-      //     );
-      //   }
-      // } catch (err: any) {
-      //   console.error("❌ Profile fetch error:", err);
-      //   setError("An unexpected error occurred while loading the profile.");
-      // } finally {
-      //   setLoading(false);
-      // }
     };
 
     if (status === "authenticated") loadStudentProfile();
-  }, [studentId, session, status]);
+  }, [studentId, session, status, router]);
 
   const chartData = useMemo(
     () => (profile ? aggregateMoodData(profile.recent_moods) : []),
     [profile]
   );
+
   const maxCheckIns = Math.max(...chartData.map((d) => d.total), 1);
+  
   const activeMoods = useMemo(
     () =>
       ALL_EMOTIONS.filter((mood) =>
@@ -247,7 +166,6 @@ export default function StudentProfileClient({
       />
     );
 
-  // --- Send Email Function ---
   const handleSendEmail = () => {
     if (!profile?.email) {
       alert("No email address found for this student.");
@@ -257,7 +175,7 @@ export default function StudentProfileClient({
     const subject = encodeURIComponent(
       `Follow-up: ${profile.full_name}'s Well-being Classification`
     );
-    const body = encodeURIComponent(
+    const bodyText = encodeURIComponent(
       `Dear ${profile.full_name},\n\n` +
         `This message is to reach out regarding your recent well-being classification result, ` +
         `which indicated a status of "${profile.latest_classification.status}".\n\n` +
@@ -267,7 +185,7 @@ export default function StudentProfileClient({
         `University Guidance Office`
     );
 
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${profile.email}&su=${subject}&body=${body}`;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${profile.email}&su=${subject}&body=${bodyText}`;
 
     try {
       window.open(gmailUrl, "_blank");
@@ -279,27 +197,9 @@ export default function StudentProfileClient({
     }
   };
 
-  const classificationMessages: Record<string, string> = {
-    InCrisis:
-      "We noticed that your latest classification indicates you may be in crisis. Please know that we are here to help and encourage you to schedule an appointment with the Guidance Office as soon as possible.",
-    Struggling:
-      "Your latest classification shows you might be struggling. Our team would like to offer support and resources to help you improve your well-being.",
-    Thriving:
-      "Congratulations on maintaining a positive well-being status. Keep up the good work and continue practicing healthy habits.",
-    Excelling:
-      "Your performance and well-being are outstanding. Continue to be a role model for your peers.",
-  };
-
-  const message =
-    classificationMessages[profile.latest_classification.status] || "";
-
-  const body = encodeURIComponent(
-    `Dear ${profile.full_name},\n\n${message}\n\nBest regards,\nUniversity Guidance Office`
-  );
-
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* header */}
       <header className="pb-4 border-b border-gray-200">
         <button
           onClick={() => router.push("/students")}
@@ -333,7 +233,7 @@ export default function StudentProfileClient({
         </div>
       </header>
 
-      {/* Status Badge */}
+      {/* current classification badge */}
       <div className="p-6 bg-white rounded-2xl shadow-md border-l-4 border-l-[#460F9D]">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -356,7 +256,7 @@ export default function StudentProfileClient({
           </div>
 
           <div className="text-right">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">
+            <p className="text-xs text-gray-500">
               Classified On
             </p>
             <p className="text-sm font-semibold text-gray-700">
@@ -375,7 +275,7 @@ export default function StudentProfileClient({
         </div>
       </div>
 
-      {/* Details Grid */}
+      {/* details grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <BentoDetailCard
           icon={AiOutlineMail}
@@ -395,88 +295,41 @@ export default function StudentProfileClient({
           value={profile.program}
           colorClass="text-blue-600"
         />
+        <BentoDetailCard
+          icon={IoChatbubblesOutline}
+          title="Consultations Attended"
+          value={String(profile.consultations_count || 0)}
+          colorClass="text-indigo-600"
+        />
+        <BentoDetailCard
+          icon={IoCheckmarkDoneOutline}
+          title="Routine Attended"
+          value={String(profile.routine_count || 0)}
+          colorClass="text-emerald-600"
+        />
+        <BentoDetailCard
+          icon={IoRepeatOutline}
+          title="Follow-ups Attended"
+          value={String(profile.followup_count || 0)}
+          colorClass="text-orange-600"
+        />
       </div>
 
-      {/* Mood Chart */}
-      <div className="p-6 bg-white rounded-2xl shadow-md">
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
-          <IoCalendarOutline size={24} className="text-[#460F9D]" />
-          <div>
-            <h3 className="text-xl font-bold text-gray-800">
-              7-Day Mood Check-In Overview
-            </h3>
-            <p className="text-sm text-gray-500">
-              Daily mood frequency tracking
-            </p>
-          </div>
-        </div>
+      {/* mood checkin section */}
+      <MoodCheckInOverview 
+        profile={profile}
+        chartData={chartData}
+        maxCheckIns={maxCheckIns}
+        activeMoods={activeMoods}
+        emotionColorMap={EMOTION_COLOR_MAP}
+        customTooltip={CustomMoodTooltip}
+      />
 
-        {profile.recent_moods.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg font-medium">No mood check-ins recorded</p>
-            <p className="text-sm mt-1">
-              This student hasn’t logged any moods in the past 7 days.
-            </p>
-          </div>
-        ) : (
-          <div style={{ width: "100%", height: 320 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid
-                  vertical={false}
-                  stroke="#e5e7eb"
-                  strokeDasharray="3 3"
-                />
-                <XAxis
-                  dataKey="day"
-                  stroke="#6b7280"
-                  tickLine={false}
-                  axisLine={{ stroke: "#e5e7eb" }}
-                  style={{ fontSize: "12px" }}
-                />
-                <YAxis
-                  stroke="#6b7280"
-                  tickLine={false}
-                  axisLine={false}
-                  domain={[0, maxCheckIns]}
-                  allowDecimals={false}
-                  width={40}
-                  style={{ fontSize: "12px" }}
-                />
-                <Tooltip
-                  content={<CustomMoodTooltip />}
-                  cursor={{ fill: "#f3f4f6" }}
-                />
-                <Legend
-                  wrapperStyle={{ paddingTop: "16px" }}
-                  iconType="circle"
-                  formatter={(value) => (
-                    <span style={{ color: "#4b5563", fontSize: "13px" }}>
-                      {" "}
-                      {EMOTION_COLOR_MAP[
-                        value as keyof typeof EMOTION_COLOR_MAP
-                      ]?.label || value}{" "}
-                    </span>
-                  )}
-                />
-                {activeMoods.map((moodKey) => (
-                  <Bar
-                    key={moodKey}
-                    dataKey={moodKey}
-                    name={EMOTION_COLOR_MAP[moodKey]?.label || moodKey}
-                    stackId="a"
-                    fill={EMOTION_COLOR_MAP[moodKey]?.color || "#ccc"}
-                    radius={[4, 4, 0, 0]}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
+      {/* appointment history of the student */}
+      <AppointmentHistory studentId={profile.student_id} />
+
+      {/* classification trend section */}
+      <MentalWellBeingStatus profile={profile} />
     </div>
   );
 }
