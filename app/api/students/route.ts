@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { fetchStudents, FetchStudentsParams } from "@/lib/api/studentClassification";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
 
 export async function GET(request: NextRequest) {
   console.log('🔥 Students API called');
