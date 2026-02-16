@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
 import Sidebar from "@/components/Sidebar";
 import DashboardClient from "./dashboardClient";
 
