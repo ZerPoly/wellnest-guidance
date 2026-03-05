@@ -109,41 +109,40 @@ export default function StudentProfileClient({
 
   useEffect(() => {
     const loadStudentProfile = async () => {
-      // wait until session and studentid are available
-      if (status === "loading" || !studentId) return;
+      // 1. wait for session to be ready
+      if (status === "loading") return;
 
-      const accessToken = session?.user?.accessToken;
-      const userEmail = session?.user?.email;
-
-      if (!userEmail || !accessToken) {
-        setError("authentication error: user session expired or missing data.");
-        setLoading(false);
+      // 2. handle unauthenticated state immediately
+      if (status === "unauthenticated") {
+        router.push("/auth");
         return;
       }
 
-      // try to retrieve the data passed from the password modal
-      const cachedKey = `student_${studentId}`;
-      const cachedData = sessionStorage.getItem(cachedKey);
+      const accessToken = session?.user?.accessToken;
+      if (!accessToken) {
+        setError("session expired. please log in again.");
+        setLoading(false); // essential: stop the spinner
+        return;
+      }
+
+      // 3. check for the data
+      const cachedData = sessionStorage.getItem(`student_${studentId}`);
 
       if (cachedData) {
         try {
           const apiData = JSON.parse(cachedData);
           const mappedProfile = mapApiDataToProfile(apiData);
           setProfile(mappedProfile);
-          setLoading(false);
-          return; // success: exit the effect
         } catch (e) {
-          console.error("error parsing cached student data:", e);
-          setError("an unexpected error occurred while loading the profile.");
+          setError("failed to parse student data.");
         } finally {
-          setLoading(false);
+          setLoading(false); // stop the spinner after success or catch
         }
+      } else {
+        // 4. if no data found, go back to student list
+        console.warn("no cached data found for this student. redirecting...");
+        router.push("/students");
       }
-
-      // if no cached data is found, the user likely bypassed the security modal
-      // redirect back to the list to force re-verification
-      console.warn(`no cached data found for key: ${cachedKey}. redirecting.`);
-      router.push("/students");
     };
 
     loadStudentProfile();
