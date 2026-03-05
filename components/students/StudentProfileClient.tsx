@@ -109,39 +109,89 @@ export default function StudentProfileClient({
 
   useEffect(() => {
     const loadStudentProfile = async () => {
-      // 1. wait for session to be ready
-      if (status === "loading") return;
+      console.log('=== LOADING STUDENT PROFILE ===');
+      console.log('Student ID from props:', studentId);
+      console.log('Session status:', status);
+      
+      // 1. Wait for session to be ready
+      if (status === "loading") {
+        console.log('Session still loading...');
+        return;
+      }
 
-      // 2. handle unauthenticated state immediately
+      // 2. Handle unauthenticated state immediately
       if (status === "unauthenticated") {
+        console.log('User not authenticated, redirecting to auth');
         router.push("/auth");
         return;
       }
 
       const accessToken = session?.user?.accessToken;
       if (!accessToken) {
-        setError("session expired. please log in again.");
-        setLoading(false); // essential: stop the spinner
+        console.error('No access token found');
+        setError("Session expired. Please log in again.");
+        setLoading(false);
         return;
       }
 
-      // 3. check for the data
-      const cachedData = sessionStorage.getItem(`student_${studentId}`);
+      // 3. Try to get cached data with the exact key format
+      const cacheKey = `student_${studentId}`;
+      console.log('Looking for cache key:', cacheKey);
+      
+      // List all sessionStorage keys for debugging
+      console.log('All sessionStorage keys:', Object.keys(sessionStorage));
+      
+      const cachedData = sessionStorage.getItem(cacheKey);
+      console.log('Cached data found:', cachedData ? 'Yes' : 'No');
 
       if (cachedData) {
         try {
+          console.log('Parsing cached data...');
           const apiData = JSON.parse(cachedData);
+          console.log('Parsed API data:', apiData);
+          
           const mappedProfile = mapApiDataToProfile(apiData);
+          console.log('Mapped profile:', mappedProfile);
+          
           setProfile(mappedProfile);
+          setLoading(false);
+          console.log('Profile loaded successfully!');
         } catch (e) {
-          setError("failed to parse student data.");
-        } finally {
-          setLoading(false); // stop the spinner after success or catch
+          console.error('Error parsing cached data:', e);
+          setError("Failed to parse student data.");
+          setLoading(false);
         }
       } else {
-        // 4. if no data found, go back to student list
-        console.warn("no cached data found for this student. redirecting...");
-        router.push("/students");
+        // 4. Data not found - try to wait a bit in case it's still being stored
+        console.log('No cached data found, waiting 500ms and retrying...');
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const retryData = sessionStorage.getItem(cacheKey);
+        console.log('Retry - cached data found:', retryData ? 'Yes' : 'No');
+        
+        if (retryData) {
+          try {
+            const apiData = JSON.parse(retryData);
+            const mappedProfile = mapApiDataToProfile(apiData);
+            setProfile(mappedProfile);
+            setLoading(false);
+            console.log('Profile loaded on retry!');
+          } catch (e) {
+            console.error('Error parsing data on retry:', e);
+            setError("Failed to parse student data.");
+            setLoading(false);
+          }
+        } else {
+          console.warn('No cached data found even after retry, redirecting...');
+          setError("Student data not found. Please try again from the student list.");
+          setLoading(false);
+          
+          // Wait 2 seconds before redirecting so user can see the error
+          setTimeout(() => {
+            router.push("/students");
+          }, 2000);
+        }
       }
     };
 
