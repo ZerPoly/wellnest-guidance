@@ -92,23 +92,45 @@ const StudentsContent: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // When password verified successfully
-  const handlePasswordVerified = (
-  studentId: string,
-  result: StudentProfileData | undefined
-) => {
-  setIsModalOpen(false);
-  setRevealedStudents((prev) => [...prev, studentId]);
-
-  if (result) {
-    // ensure data is stored before navigating
-    sessionStorage.removeItem(`student_${studentId}`);
-    sessionStorage.setItem(`student_${studentId}`, JSON.stringify(result));
+  // ✅ FIXED: When password verified successfully
+  const handlePasswordVerified = async (
+    studentId: string,
+    result: StudentProfileData | undefined
+  ) => {
+    console.log('Password verified for student:', studentId);
+    console.log('Result data:', result);
     
-    // navigate to the specific student profile route
-    router.push(`/students/${studentId}`);
-  }
-};
+    setIsModalOpen(false);
+    setRevealedStudents((prev) => [...prev, studentId]);
+
+    if (result) {
+      try {
+        // Clear any existing data first
+        sessionStorage.removeItem(`student_${studentId}`);
+        
+        // Store the new data
+        const dataToStore = JSON.stringify(result);
+        sessionStorage.setItem(`student_${studentId}`, dataToStore);
+        
+        // Verify the data was stored
+        const storedData = sessionStorage.getItem(`student_${studentId}`);
+        console.log('Data stored successfully:', storedData ? 'Yes' : 'No');
+        
+        // Small delay to ensure storage completes
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Navigate to the profile page
+        console.log('Navigating to:', `/students/${studentId}`);
+        router.push(`/students/${studentId}`);
+      } catch (error) {
+        console.error('Error storing student data:', error);
+        alert('Failed to load student profile. Please try again.');
+      }
+    } else {
+      console.error('No result data received from password verification');
+      alert('Failed to retrieve student data. Please try again.');
+    }
+  };
 
   // Fetch students from API
   const fetchStudents = useCallback(
@@ -189,15 +211,15 @@ const StudentsContent: React.FC = () => {
 
   const renderStatusText = (classification: ClassificationType) => {
     const color =
-  classification === "Excelling"
-    ? "text-green-600"
-  : classification === "Thriving"
-    ? "text-amber-500"
-  : classification === "Struggling"
-    ? "text-blue-600"
-  : classification === "InCrisis"
-    ? "text-red-600"
-  : "text-gray-600"
+      classification === "Excelling"
+        ? "text-green-600"
+        : classification === "Thriving"
+        ? "text-amber-500"
+        : classification === "Struggling"
+        ? "text-blue-600"
+        : classification === "InCrisis"
+        ? "text-red-600"
+        : "text-gray-600";
 
     const displayText =
       classification === "InCrisis" ? "In-Crisis" : classification;
@@ -259,8 +281,8 @@ const StudentsContent: React.FC = () => {
       {/* filter controls parent container */}
       <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4">
         {/* showing N students */}
-        <p className="text-sm text-(--text-muted)">
-          Showing <span className="font-bold text-(--title)">{filteredStudents.length}</span> students
+        <p className="text-sm text-gray-600">
+          Showing <span className="font-bold text-gray-800">{filteredStudents.length}</span> students
         </p>
 
         {/* filter dropdown */}
@@ -287,7 +309,6 @@ const StudentsContent: React.FC = () => {
 
           {showFilter && (
             <>
-              {/* Transparent overlay to close dropdown when clicking outside */}
               <div 
                 className="fixed inset-0 z-10" 
                 onClick={() => setShowFilter(false)} 
@@ -334,7 +355,6 @@ const StudentsContent: React.FC = () => {
                 <StudentAvatar classification={student.classification} />
                 
                 <p className="font-bold text-lg text-gray-800">
-                  {/* Always mask by default; redirection handles the 'revealed' view */}
                   {maskEmail(student.email, false)}
                 </p>
 
