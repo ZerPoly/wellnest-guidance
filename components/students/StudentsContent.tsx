@@ -94,20 +94,21 @@ const StudentsContent: React.FC = () => {
 
   // When password verified successfully
   const handlePasswordVerified = (
-    studentId: string,
-    result: StudentProfileData | undefined
-  ) => {
-    setIsModalOpen(false);
-    setRevealedStudents((prev) => [...prev, studentId]);
+  studentId: string,
+  result: StudentProfileData | undefined
+) => {
+  setIsModalOpen(false);
+  setRevealedStudents((prev) => [...prev, studentId]);
 
-    if (result) {
-      // Clear first
-      sessionStorage.removeItem(`student_${studentId}`);
-
-      sessionStorage.setItem(`student_${studentId}`, JSON.stringify(result));
-      router.push(`/students/${studentId}`);
-    }
-  };
+  if (result) {
+    // ensure data is stored before navigating
+    sessionStorage.removeItem(`student_${studentId}`);
+    sessionStorage.setItem(`student_${studentId}`, JSON.stringify(result));
+    
+    // navigate to the specific student profile route
+    router.push(`/students/${studentId}`);
+  }
+};
 
   // Fetch students from API
   const fetchStudents = useCallback(

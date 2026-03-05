@@ -109,16 +109,21 @@ export default function StudentProfileClient({
 
   useEffect(() => {
     const loadStudentProfile = async () => {
+      // wait until session and studentid are available
+      if (status === "loading" || !studentId) return;
+
       const accessToken = session?.user?.accessToken;
       const userEmail = session?.user?.email;
 
       if (!userEmail || !accessToken) {
-        setError("Authentication error: User session expired or missing data.");
+        setError("authentication error: user session expired or missing data.");
         setLoading(false);
         return;
       }
 
-      const cachedData = sessionStorage.getItem(`student_${studentId}`);
+      // try to retrieve the data passed from the password modal
+      const cachedKey = `student_${studentId}`;
+      const cachedData = sessionStorage.getItem(cachedKey);
 
       if (cachedData) {
         try {
@@ -126,18 +131,22 @@ export default function StudentProfileClient({
           const mappedProfile = mapApiDataToProfile(apiData);
           setProfile(mappedProfile);
           setLoading(false);
-          return;
+          return; // success: exit the effect
         } catch (e) {
-          setError("An unexpected error occurred while loading the profile.");
+          console.error("error parsing cached student data:", e);
+          setError("an unexpected error occurred while loading the profile.");
         } finally {
           setLoading(false);
         }
       }
 
+      // if no cached data is found, the user likely bypassed the security modal
+      // redirect back to the list to force re-verification
+      console.warn(`no cached data found for key: ${cachedKey}. redirecting.`);
       router.push("/students");
     };
 
-    if (status === "authenticated") loadStudentProfile();
+    loadStudentProfile();
   }, [studentId, session, status, router]);
 
   const chartData = useMemo(
