@@ -2,6 +2,8 @@
 // -------------------------------
 // Types
 
+// import { User } from "next-auth";
+
 export type Consultation = {
   email: string;
   type: string;
@@ -117,4 +119,48 @@ export const agendas: AgendaData[] = [
     location: "Face to Face",
     description: "Interview session with candidate.",
   },
+];
+
+export type AppUser = {
+  id: string;
+  email: string;
+  name?: string;
+  department: string;
+  status: 'Active' | 'Inactive';
+}
+
+// Users Data
+export const studentUsers: AppUser[] = [
+  { id: '1',  email: 'johndelacruz@umak.edu.ph',   department: 'Institute of Psychology (IOPsy)', status: 'Active'   },
+  { id: '2',  email: 'isabella.cruz@umak.edu.ph',   department: 'College of Governance and Public Policy (CGPP)', status: 'Active'   },
+  { id: '3',  email: 'ramon.villanueva@umak.edu.ph', department: 'College of Computer and Information Sciences (CCIS)', status: 'Active'  },
+  { id: '4',  email: 'clarisse.delarosa@umak.edu.ph',department: 'College of Computer and Information Sciences (CCIS)', status: 'Inactive'  }
+]
+
+export const counselorUsers: AppUser[] = [
+  { id: '1', email: 'johndoe@gmail.com',  name:'John Doe', department: 'College of Computer and Information Sciences (CCIS)', status: 'Active'   },
+  { id: '2',  email: 'mark@gmail.com',   name:'Mark Johnson', department: 'Institute of Psychology (IOPsy)', status: 'Active'   },
+  { id: '3',  email: 'bowie@gmail.com', name:'Bowie Smith', department: 'Institute of Nursing (ION)', status: 'Active'  },
+  { id: '4',  email: 'rico@gmail.com',name:'Rico Garcia', department: 'College of Computer and Information Sciences (CCIS)', status: 'Inactive'  }
+
+]
+
+//Departments Data
+export const departments = [
+  'College of Computer and Information Sciences (CCIS)',
+  'College of Engineering (COE)',
+  'College of Engineering Technology (CET)',
+  'College of Governance and Public Policy (CGPP)',
+  'Institute of Psychology (IOPsy)',
+  'Institute of Nursing (ION)',
+  'Institute of Arts and Design (IAD)',
+  'College of Human Kinetics (CHK)',
+  'College of Construction Sciences and Engineering (CCSE)',
+  'Institute of Accountancy (IOA)',
+  'College of Business and Financial Sciences (CBFS)',
+  'College of Tourism and Hospitality Management (CTHM)',
+  'Institute of Pharmacy (IOP)',
+  'Institute of Imaging Health and Sciences (IIHS)',
+  'Institute of Social Work (ISW)'
+
 ];
