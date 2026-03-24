@@ -20,7 +20,7 @@ const Header: React.FC<HeaderProps> = ({ toggleMobileMenu }) => {
   const userNamePart = userEmail ? userEmail.split('@')[0] : 'User';
 
   return (
-    <header className="h-18 bg-[var(--bg)] border-b border-zinc-800 p-4 flex items-center justify-between shadow-lg shrink-0">
+    <header className="h-18 bg-(--bg-light) border-b border-(--outline) p-4 flex items-center justify-between shadow-lg shrink-0">
       
       {/* Left Side: Mobile Menu Button & Greeting */}
       <div className="flex items-center space-x-4">
