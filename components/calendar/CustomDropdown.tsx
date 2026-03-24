@@ -22,40 +22,49 @@ export default function CustomDropdown({
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+        className="flex items-center gap-2 px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-lg hover:bg-[var(--card-dark)] transition"
       >
-        <span className="font-semibold text-gray-700">
+        <span className="font-semibold text-[var(--foreground)]">
           {options.find(opt => opt.value === value)?.label}
         </span>
         <ChevronDown 
           size={16} 
-          className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+          className={`text-[var(--foreground-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} 
         />
       </button>
       
       {isOpen && (
         <>
+          {/* Background overlay for click-away logic */}
           <div 
             className="fixed inset-0 z-10" 
             onClick={() => setIsOpen(false)} 
           />
-          <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto w-32">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => { 
-                  onChange(option.value); 
-                  setIsOpen(false); 
-                }}
-                className={`w-full text-left px-4 py-2 hover:bg-purple-50 transition ${
-                  value === option.value 
-                    ? 'bg-purple-100 text-purple-700 font-semibold' 
-                    : 'text-gray-700'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
+          
+          {/* - Changed bg-white to var(--card)
+            - Changed border-gray-200 to var(--line)
+            - Added overflow-hidden to ensure rounded corners on hover
+            - Added custom-scrollbar class
+          */}
+          <div className="absolute top-full mt-2 bg-[var(--card)] border border-[var(--line)] rounded-xl shadow-lg z-20 max-h-60 overflow-hidden w-32 flex flex-col">
+            <div className="overflow-y-auto custom-scrollbar">
+              {options.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => { 
+                    onChange(option.value); 
+                    setIsOpen(false); 
+                  }}
+                  className={`w-full text-left px-4 py-2 hover:bg-[var(--card-dark)] transition ${
+                    value === option.value 
+                      ? 'bg-[var(--card-dark)] text-[var(--button)] font-bold' 
+                      : 'text-[var(--foreground)]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
         </>
       )}

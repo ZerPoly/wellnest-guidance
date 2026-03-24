@@ -20,7 +20,7 @@ export default async function AuthenticatedLayout({ children }: AuthenticatedLay
     
     return (
       <AuthenticatedLayoutClient>
-        <TokenDebugger/>
+        {/* <TokenDebugger/> */}
         {children}
       </AuthenticatedLayoutClient>
     );

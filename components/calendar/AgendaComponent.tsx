@@ -27,30 +27,18 @@ const getStatusBadge = (status: string) => {
 
 const getCounselorStatusBadge = (agenda: AgendaData) => {
   const { status, created_by, student_response } = agenda;
-
-  if (status === 'confirmed') {
-    return { label: 'Confirmed', className: 'bg-green-200 text-green-800' };
-  }
-  
+  if (status === 'confirmed') return { label: 'Confirmed', className: 'bg-emerald-100 text-emerald-700' };
   if (status === 'declined') {
-    // check *who* declined it
-    if (student_response === 'declined') {
-      return { label: 'Declined by Student', className: 'bg-red-200 text-red-800' };
-    }
-    return { label: 'Declined by You', className: 'bg-red-200 text-red-800' };
+    return student_response === 'declined' 
+      ? { label: 'Declined by Student', className: 'bg-red-100 text-red-700' }
+      : { label: 'Declined by You', className: 'bg-red-100 text-red-700' };
   }
-
   if (status === 'pending') {
-    // check *who* it is pending on
-    if (created_by === 'counselor') {
-      return { label: 'Pending Student', className: 'bg-yellow-200 text-yellow-800' };
-    }
-    // if created_by === 'student'
-    return { label: 'Pending Your Reply', className: 'bg-yellow-200 text-yellow-800' };
+    return created_by === 'counselor'
+      ? { label: 'Pending Student', className: 'bg-amber-100 text-amber-700' }
+      : { label: 'Pending Your Reply', className: 'bg-amber-100 text-amber-700' };
   }
-
-  // fallback
-  return { label: 'Scheduled', className: 'bg-gray-200 text-gray-800' };
+  return { label: 'Scheduled', className: 'bg-[var(--bg)] text-[var(--text-muted)]' };
 };
 
 export default function AgendaComponent({ 
@@ -109,133 +97,59 @@ export default function AgendaComponent({
   const agendasByDate = shouldShowDateLabels ? groupedAgendas() : {};
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
+    <div className="bg-[var(--bg-light)] rounded-2xl border border-[var(--outline)] shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Consultations</h2>
-        <button
-          onClick={onCreateAgenda}
-          className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-        >
+        <h2 className="text-2xl font-bold text-[var(--title)]">Consultations</h2>
+        <button onClick={onCreateAgenda} className="p-2 bg-[var(--cyan)] text-white rounded-lg hover:bg-[var(--cyan-dark)] transition active:scale-95 shadow-lg shadow-[var(--cyan)]/20">
           <Plus size={20} />
         </button>
       </div>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {[
-          { key: 'all', label: 'All Upcoming' },
-          { key: 'today', label: 'Today' },
-          { key: 'tomorrow', label: 'Tomorrow' },
-          { key: 'week', label: 'This Week' },
-        ].map((btn) => (
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar">
+        {[{k:'all', l:'All Upcoming'}, {k:'today', l:'Today'}, {k:'tomorrow', l:'Tomorrow'}, {k:'week', l:'This Week'}].map((btn) => (
           <button
-            key={btn.key}
-            onClick={() => setFilter(btn.key as any)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${
-              filter === btn.key
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            key={btn.k}
+            onClick={() => setFilter(btn.k as any)}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition whitespace-nowrap ${filter === btn.k ? 'bg-[var(--cyan)] text-white shadow-md' : 'bg-[var(--bg)] text-[var(--text-muted)] hover:bg-[var(--outline)] border border-[var(--outline)]'}`}
           >
-            {btn.label}
+            {btn.l}
           </button>
         ))}
       </div>
 
-      <div className="space-y-4 max-h-[600px] overflow-y-auto">
+      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
         {filteredAgendas.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 font-medium">No schedules found</p>
+          <div className="text-center py-12 bg-[var(--bg)] rounded-xl border border-dashed border-[var(--outline)]">
+            <p className="text-[var(--text-muted)] font-medium">No schedules found</p>
           </div>
-        ) : shouldShowDateLabels ? (
-          // show grouped agendas
-          // this line is now safe, as agendasbydate is always an object
+        ) : (
           Object.keys(agendasByDate).map((date) => {
-            const agendaDate = new Date(date + 'T00:00:00');
-            const isToday = agendaDate.getTime() === today.getTime();
-            const isTomorrow = agendaDate.getTime() === tomorrow.getTime();
-            
-            let dateLabel = '';
-            if (isToday) { dateLabel = 'Today'; } 
-            else if (isTomorrow) { dateLabel = 'Tomorrow'; } 
-            else { 
-              dateLabel = agendaDate.toLocaleDateString('en-US', { 
-                weekday: 'long', month: 'long', day: 'numeric',
-                year: agendaDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-              });
-            }
-            
+            const d = new Date(date + 'T00:00:00');
             return (
               <div key={date}>
-                <div className="sticky top-0 bg-white py-2 mb-3 border-b-2 border-purple-200 z-10">
-                  <h3 className="text-sm font-bold text-purple-600 uppercase tracking-wide">
-                    {dateLabel}
+                <div className="sticky top-0 bg-[var(--bg-light)] py-2 mb-3 border-b border-[var(--outline)] z-10">
+                  <h3 className="text-sm font-bold text-[var(--cyan)] uppercase tracking-wide">
+                    {date === today.toISOString().split('T')[0] ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                   </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {agendaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
                 </div>
-                
                 <div className="space-y-3 mb-6">
                   {agendasByDate[date].map((agenda) => {
-                    const colors = agendaColors[agenda.type] || agendaColors['Default'];
-                    const statusBadge = getCounselorStatusBadge(agenda);
-                    
+                    const colors = agendaColors[agenda.type] || { border: 'border-[var(--cyan)]', dot: 'bg-[var(--cyan)]', text: 'text-[var(--cyan)]' };
+                    const badge = getCounselorStatusBadge(agenda);
                     return (
-                      <div
-                        key={agenda.id}
-                        onClick={() => onAgendaClick(agenda)}
-                        className={`p-4 rounded-xl border-l-4 ${colors.border} ${colors.bg} cursor-pointer hover:shadow-md transition`}
-                      >
+                      <div key={agenda.id} onClick={() => onAgendaClick(agenda)} className={`p-4 rounded-xl border border-[var(--outline)] border-l-4 ${colors.border} bg-[var(--bg)] cursor-pointer hover:shadow-md transition`}>
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
                             <div className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                            <h3 className="font-bold text-gray-800">{agenda.student_name}</h3>
-                            
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge.className}`}>
-                              {statusBadge.label}
-                            </span>
+                            <h3 className="font-bold text-[var(--title)]">{agenda.student_name}</h3>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${badge.className}`}>{badge.label}</span>
                           </div>
-                          <p className={`text-sm font-medium ${colors.text} mb-2`}>
-                            {agenda.type}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <span className="font-medium">{agenda.startTime} - {agenda.endTime}</span>
-                          </div>
+                          <p className={`text-sm font-medium ${colors.text} mb-2 opacity-80`}>{agenda.type}</p>
+                          <div className="text-sm text-[var(--text-muted)] font-medium">{agenda.startTime} - {agenda.endTime}</div>
                         </div>
                       </div>
                     );
                   })}
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          // show agendas without date labels
-          filteredAgendas.map((agenda) => {
-            const colors = agendaColors[agenda.type] || agendaColors['Default'];
-            const statusBadge = getCounselorStatusBadge(agenda);
-
-            return (
-              <div
-                key={agenda.id}
-                onClick={() => onAgendaClick(agenda)}
-                className={`p-4 rounded-xl border-l-4 ${colors.border} ${colors.bg} cursor-pointer hover:shadow-md transition`}
-              >
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                    <h3 className="font-bold text-gray-800">{agenda.student_name}</h3>
-
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge.className}`}>
-                      {statusBadge.label}
-                    </span>
-                  </div>
-                  <p className={`text-sm font-medium ${colors.text} mb-2`}>
-                    {agenda.type}
-                  </p>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span className="font-medium">{agenda.startTime} - {agenda.endTime}</span>
-                  </div>
                 </div>
               </div>
             );

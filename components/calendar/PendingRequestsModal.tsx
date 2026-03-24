@@ -1,28 +1,28 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Inbox } from 'lucide-react';
+import { X, Clock, XCircle, Inbox } from 'lucide-react';
 import { AgendaData, agendaColors } from '../types/agenda.types';
 
 const getCounselorStatusBadge = (agenda: AgendaData) => {
   const { status, created_by, student_response } = agenda;
 
   if (status === 'confirmed' || status === 'both_confirmed') {
-    return { label: 'Confirmed', className: 'bg-green-200 text-green-800' };
+    return { label: 'Confirmed', className: 'bg-green-100 text-green-700' };
   }
   if (status === 'declined') {
     if (student_response === 'declined') {
-      return { label: 'Declined by Student', className: 'bg-red-200 text-red-800' };
+      return { label: 'Declined by Student', className: 'bg-red-100 text-red-700' };
     }
-    return { label: 'Declined by You', className: 'bg-red-200 text-red-800' };
+    return { label: 'Declined by You', className: 'bg-red-100 text-red-700' };
   }
   if (status === 'pending') {
     if (created_by === 'counselor') {
-      return { label: 'Pending Student', className: 'bg-yellow-200 text-yellow-800' };
+      return { label: 'Pending Student', className: 'bg-yellow-100 text-yellow-700' };
     }
-    return { label: 'Pending Your Reply', className: 'bg-yellow-200 text-yellow-800' };
+    return { label: 'Pending Your Reply', className: 'bg-yellow-100 text-yellow-700' };
   }
-  return { label: `? ${status}`, className: 'bg-gray-200 text-gray-700' };
+  return { label: `? ${status}`, className: 'bg-[var(--bg)] text-[var(--text-muted)]' };
 };
 
 interface PendingRequestsModalProps {
@@ -34,151 +34,140 @@ interface PendingRequestsModalProps {
 
 type RequestTab = 'pending' | 'declined';
 
+const groupByDate = (list: AgendaData[]) => {
+  const groups: { [key: string]: AgendaData[] } = {};
+  list.forEach(item => {
+    if (!groups[item.date]) groups[item.date] = [];
+    groups[item.date].push(item);
+  });
+  return groups;
+};
+
 export default function PendingRequestsModal({
   isOpen,
   onClose,
-  agendas,
+  agendas = [],
   onAgendaClick,
 }: PendingRequestsModalProps) {
   const [activeTab, setActiveTab] = useState<RequestTab>('pending');
   
   if (!isOpen) return null;
 
-  // 1. Sort and Filter data
-  const sortedAgendas = agendas.sort((a, b) => {
-    const dateCompare = a.date.localeCompare(b.date);
-    if (dateCompare !== 0) return dateCompare;
-    return a.startTime.localeCompare(b.startTime);
-  });
+  const dataToDisplay = agendas
+    .filter(a => a.status === activeTab)
+    .sort((a, b) => b.date.localeCompare(a.date) || a.startTime.localeCompare(b.startTime));
 
-  const pendingRequests = sortedAgendas.filter(a => a.status === 'pending');
-  const declinedRequests = sortedAgendas.filter(a => a.status === 'declined');
+  const pendingCount = agendas.filter(a => a.status === 'pending').length;
+  const declinedCount = agendas.filter(a => a.status === 'declined').length;
 
-  const dataToDisplay = activeTab === 'pending' ? pendingRequests : declinedRequests;
-  const listTitle = activeTab === 'pending' ? 'Pending Requests' : 'Declined Requests';
-  const listColor = activeTab === 'pending' ? 'text-yellow-600' : 'text-red-600';
+  const renderCategorizedList = (list: AgendaData[]) => {
+    const grouped = groupByDate(list);
+    const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
-  // 2. Group the filtered data by date
-  const groupedAgendas = dataToDisplay.reduce((groups, agenda) => {
-    const date = agenda.date;
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(agenda);
-    return groups;
-  }, {} as Record<string, AgendaData[]>);
+    return sortedDates.map(date => {
+      const d = new Date(date + 'T00:00:00');
+      const dayLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      const subLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+      return (
+        <div key={date} className="mb-8 last:mb-0">
+          <div className="mb-4">
+            <h3 className="text-base font-black text-[var(--cyan)] tracking-tight">{dayLabel}</h3>
+            <p className="text-xs text-[var(--text-muted)] font-medium">{subLabel}</p>
+            <div className="h-[1px] bg-[var(--outline)] w-full mt-2 opacity-50" />
+          </div>
 
-  const TabButton: React.FC<{ tab: RequestTab, label: string, count: number }> = ({ tab, label, count }) => {
-    const isActive = activeTab === tab;
-    return (
-      <button
-        onClick={() => setActiveTab(tab)}
-        className={`px-3 py-1 text-sm font-semibold rounded-full transition-colors flex items-center gap-1 ${
-          isActive 
-            ? 'bg-purple-600 text-white shadow-md' 
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-        }`}
-      >
-        {label}
-        <span className={`px-2 py-0.5 rounded-full text-xs ${isActive ? 'bg-white text-purple-600' : 'bg-gray-300 text-gray-800'}`}>
-          {count}
-        </span>
-      </button>
-    );
+          <div className="grid gap-3">
+            {grouped[date].map((agenda) => {
+              const badge = getCounselorStatusBadge(agenda);
+              return (
+                <div 
+                  key={agenda.id} 
+                  onClick={() => { onAgendaClick(agenda); onClose(); }} 
+                  className="p-4 bg-[var(--bg)] border border-[var(--outline)] rounded-xl cursor-pointer hover:border-[var(--cyan)] transition-all group"
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex flex-col gap-0.5">
+                      <p className="font-extrabold text-[var(--title)] text-base group-hover:text-[var(--cyan)] transition-colors">
+                        {agenda.student_name}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)] font-bold">
+                        {agenda.startTime} - {agenda.endTime} | {agenda.type}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-md border uppercase ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    });
   };
 
-
   return (
-    <div className="fixed inset-0 z-9998 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/30 backdrop-blur"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      <div
-        className="relative bg-white rounded-2xl shadow-lg p-6 max-w-lg w-full max-h-[80vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Request Inbox</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1 transition-colors rounded-full"
-            aria-label="Close modal"
-          >
-            <X size={20} />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .hide-scrollbar::-webkit-scrollbar { display: none !important; }
+        .hide-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+      `}} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      
+      <div className="relative bg-[var(--bg-light)] border border-[var(--outline)] rounded-2xl shadow-xl flex flex-col max-w-lg w-full max-h-[85vh]">
+        
+        <div className="flex justify-between items-center p-6 border-b border-[var(--outline)] shrink-0">
+          <div className="flex flex-col gap-3">
+            <h2 className="text-2xl font-black text-[var(--title)]">Request Inbox</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setActiveTab('pending')}
+                className={`px-6 py-2 text-xs font-bold rounded-full border transition-all ${
+                  activeTab === 'pending' 
+                  ? 'bg-[var(--cyan)] text-white border-[var(--cyan)] shadow-lg shadow-[var(--cyan)]/20' 
+                  : 'bg-[var(--bg-light)] text-[var(--text-muted)] border-[var(--outline)] hover:bg-[var(--outline)]'
+                }`}
+              >
+                Pending ({pendingCount})
+              </button>
+              <button
+                onClick={() => setActiveTab('declined')}
+                className={`px-6 py-2 text-xs font-bold rounded-full border transition-all ${
+                  activeTab === 'declined' 
+                  ? 'bg-[var(--cyan)] text-white border-[var(--cyan)] shadow-lg shadow-[var(--cyan)]/20' 
+                  : 'bg-[var(--bg-light)] text-[var(--text-muted)] border-[var(--outline)] hover:bg-[var(--outline)]'
+                }`}
+              >
+                Declined ({declinedCount})
+              </button>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--title)] p-1 transition-colors self-start">
+            <X size={26} />
           </button>
         </div>
 
-        {/* --- Tab Control --- */}
-        <div className="flex space-x-3 mb-6 border-b pb-3">
-          <TabButton tab="pending" label="Pending" count={pendingRequests.length} />
-          <TabButton tab="declined" label="Declined" count={declinedRequests.length} />
-        </div>
-
-        {/* --- List Content --- */}
-        <div className={`overflow-y-auto space-y-4 flex-1`}>
-          
-          <h3 className={`text-lg font-bold uppercase tracking-wide ${listColor}`}>
-            {listTitle}
-          </h3>
-
-          {dataToDisplay.length > 0 ? (
-            <div className="space-y-6 mt-4">
-              {Object.keys(groupedAgendas).map((date) => {
-                const agendaDate = new Date(date + 'T00:00:00');
-                const dateLabel = agendaDate.toLocaleDateString('en-US', { 
-                  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
-                });
-
-                return (
-                  <div key={date} className="space-y-3">
-                    {/* Date Separator */}
-                    <div className="sticky top-0 bg-white py-1 border-b border-gray-200 z-10">
-                        <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                            {dateLabel}
-                        </h4>
-                    </div>
-                    
-                    {/* Items for the specific date */}
-                    {groupedAgendas[date].map((agenda) => {
-                      const colors = agendaColors[agenda.type] || agendaColors['Default'];
-                      const statusBadge = getCounselorStatusBadge(agenda);
-                      
-                      return (
-                        <div
-                          key={agenda.id}
-                          onClick={() => {
-                            onAgendaClick(agenda); 
-                          }}
-                          className={`p-4 rounded-xl border-l-4 ${colors.border} ${colors.bg} cursor-pointer hover:shadow-md transition`}
-                        >
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <div className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                            <h5 className="font-bold text-gray-800">{agenda.student_name}</h5>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge.className}`}>
-                              {statusBadge.label}
-                            </span>
-                          </div>
-                          <p className={`text-sm font-medium ${colors.text} mb-2`}>{agenda.type}</p>
-                          <div className="text-sm text-gray-600">
-                            <span>{agenda.startTime} - {agenda.endTime}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <Inbox size={32} className="mx-auto text-gray-400 mb-2" />
-              <p className="text-gray-500 italic">No {listTitle.toLowerCase()} at this time.</p>
-            </div>
-          )}
+        <div className="p-6 overflow-y-auto hide-scrollbar">
+          <div className="space-y-10">
+            <section>
+              <div className="flex items-center gap-2 mb-4 border-b border-[var(--outline)] pb-2">
+                {activeTab === 'pending' ? <Clock className="text-amber-500" size={20} /> : <XCircle className="text-red-500" size={20} />}
+                <h3 className="text-base font-black text-[var(--title)]">
+                  {activeTab === 'pending' ? 'Pending Requests' : 'Declined Requests'}
+                </h3>
+              </div>
+              
+              {dataToDisplay.length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)] italic py-2">
+                  No {activeTab} records found.
+                </p>
+              ) : (
+                renderCategorizedList(dataToDisplay)
+              )}
+            </section>
+          </div>
         </div>
       </div>
     </div>

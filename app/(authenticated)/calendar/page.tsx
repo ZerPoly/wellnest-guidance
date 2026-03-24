@@ -238,25 +238,24 @@ const CalendarClient = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* breadcrumb and title */}
       <div className="mb-4">
         <div className="flex flex-row space-x-1">
-          <Link href="/dashboard" className="font-extrabold text-(--text-muted) hover:text-(--title) transition-colors">
+          <Link href="/dashboard" className="font-extrabold text-[var(--foreground-muted)] hover:text-[var(--title)] transition-colors">
             Dashboard
           </Link>
-          <span className="font-regular text-(--text-muted)">
+          <span className="font-regular text-[var(--foreground-muted)]">
             / Calendar
           </span>
         </div>
         <div>
-          <h1 className="text-3xl font-extrabold text-(--title) hidden sm:block">
+          <h1 className="text-3xl font-extrabold text-[var(--title)] hidden sm:block">
             Calendar
           </h1>
         </div>
       </div>
 
       <div className="flex flex-col flex-1 min-w-0">
-        {isLoading && <p className="text-sm text-gray-500 animate-pulse mb-2">Loading Schedule...</p>}
+        {isLoading && <p className="text-sm text-[var(--text-muted)] animate-pulse mb-2">Loading Schedule...</p>}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
           <div className="lg:col-span-2">
@@ -271,7 +270,7 @@ const CalendarClient = () => {
                 setCurrentYear(year);
               }}
               onViewRequests={() => setRequestsModalOpen(true)}
-              hasPending={hasPending} // pass the derived state here
+              hasPending={hasPending}
             />
           </div>
           

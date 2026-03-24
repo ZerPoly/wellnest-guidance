@@ -13,7 +13,7 @@ interface CalendarComponentProps {
   onDayClick: (date: string, agendas: AgendaData[]) => void;
   onMonthYearChange?: (month: number, year: number) => void;
   onViewRequests: () => void;
-  hasPending?: boolean; // matched prop name from parent
+  hasPending?: boolean;
 }
 
 export default function CalendarComponent({ 
@@ -24,7 +24,7 @@ export default function CalendarComponent({
   onDayClick,
   onViewRequests,
   onMonthYearChange,
-  hasPending = false // default to false
+  hasPending = false 
 }: CalendarComponentProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -35,8 +35,8 @@ export default function CalendarComponent({
     if (onMonthYearChange) {
       onMonthYearChange(selectedMonth, selectedYear);
     }
-  }, [selectedMonth, selectedYear]);
-
+  }, [selectedMonth, selectedYear, onMonthYearChange]);
+  
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
@@ -109,16 +109,18 @@ export default function CalendarComponent({
 
   const days = [];
   
+  // Empty filler cells for previous month padding
   for (let i = 0; i < firstDay; i++) {
-    days.push(<div key={`empty-${i}`} className="h-32 border-r border-b border-gray-100 bg-gray-50/30" />);
+    days.push(<div key={`empty-${i}`} className="h-32 border border-[var(--line)] bg-[var(--background)]" />);
   }
 
+  // Logic for generating the calendar days
   for (let day = 1; day <= daysInMonth; day++) {
     const dayAgendas = getAgendasForDate(day);
-    const isCurrentDay = isToday(day);
+    const today = isToday(day);
 
     const currentDateObj = new Date(selectedYear, selectedMonth, day);
-    currentDateObj.setHours(0, 0, 0, 0);
+    currentDateObj.setHours(0, 0, 0, 0); 
 
     const minDateCheck = new Date();
     minDateCheck.setHours(0, 0, 0, 0); 
@@ -126,32 +128,19 @@ export default function CalendarComponent({
 
     const isDateTooSoon = currentDateObj < minDateCheck; 
     const isWeekend = currentDateObj.getDay() === 0 || currentDateObj.getDay() === 6;
-    const isSunday = currentDateObj.getDay() === 0; 
     const isDateDisabled = isDateTooSoon || isWeekend;
 
-    let backgroundClasses = 'bg-white';
-    if (isCurrentDay) {
-      backgroundClasses = 'bg-purple-100'; 
-    } else if (isSunday) {
-      backgroundClasses = 'bg-red-50';
-    } 
-    
-    if (isDateDisabled && !isCurrentDay) {
-      backgroundClasses = isSunday ? 'bg-red-50' : 'bg-gray-50';
-    }
-
-    let textClasses = isCurrentDay ? 'text-purple-700' : 'text-gray-700';
-    if (isDateDisabled && !isCurrentDay) {
-      textClasses = isSunday ? 'text-red-500' : 'text-gray-400';
-    }
-    
     days.push(
       <div
         key={day}
-        className={`h-32 border-r border-b border-gray-200 p-2 transition overflow-hidden ${backgroundClasses} ${
+        className={`h-32 border border-[var(--border)] p-2 transition overflow-hidden ${
+          today 
+            ? 'bg-[var(--today-bg)] border-[var(--button)] ring-1 ring-[var(--button)]' 
+            : 'bg-[var(--card)]'
+        } ${
           isDateDisabled 
-            ? 'cursor-not-allowed' 
-            : 'cursor-pointer hover:bg-purple-50'
+            ? 'bg-[var(--disabled-bg)] opacity-60 text-[var(--foreground-placeholder)] cursor-not-allowed grayscale' 
+            : 'cursor-pointer hover:bg-[var(--card-dark)]'
         }`}
         onClick={() => {
           if (!isDateDisabled) {
@@ -159,7 +148,9 @@ export default function CalendarComponent({
           }
         }}
       >
-        <div className={`text-sm font-semibold mb-1 ${textClasses}`}>
+        <div className={`text-sm font-bold mb-1 ${
+          today ? 'text-[var(--button)]' : (isDateDisabled ? 'text-[var(--foreground-placeholder)]' : 'text-[var(--foreground)]')
+        }`}>
           {day}
         </div>
         
@@ -174,17 +165,17 @@ export default function CalendarComponent({
                   onAgendaClick(agenda); 
                 }}
                 className={`text-xs px-2 py-1 rounded ${colors.bg} ${colors.border} border truncate hover:shadow-sm transition cursor-pointer ${
-                  isDateDisabled ? 'opacity-60' : '' 
+                  isDateDisabled ? 'opacity-40' : '' 
                 }`}
               >
                 <div className={`font-medium ${colors.text}`}>
-                  {agenda.title}
+                  {agenda.student_name || agenda.title}
                 </div>
               </div>
             );
           })}
           {dayAgendas.length > 2 && (
-            <div className="text-xs text-gray-500 px-2">
+            <div className="text-[10px] text-[var(--foreground-muted)] px-1 font-bold">
               +{dayAgendas.length - 2} more
             </div>
           )}
@@ -194,7 +185,7 @@ export default function CalendarComponent({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
+    <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-sm p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <CustomDropdown
@@ -214,49 +205,48 @@ export default function CalendarComponent({
         <div className="flex items-center gap-2">
           <button
             onClick={goToToday}
-            className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition font-medium text-sm"
+            className="px-4 py-2 bg-[var(--background)] text-[var(--title)] border border-[var(--border)] rounded-lg hover:bg-[var(--card-dark)] transition font-bold text-sm"
           >
             Today
           </button>
           <button
             onClick={previousMonth}
-            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+            className="p-2 bg-[var(--background)] border border-[var(--border)] rounded-lg hover:bg-[var(--card-dark)] text-[var(--foreground)] transition"
           >
             <ChevronLeft size={20} />
           </button>
           <button
             onClick={nextMonth}
-            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+            className="p-2 bg-[var(--background)] border border-[var(--border)] rounded-lg hover:bg-[var(--card-dark)] text-[var(--foreground)] transition"
           >
             <ChevronRight size={20} />
           </button>
 
-          <button
-            onClick={onViewRequests}
+          <button 
+            onClick={onViewRequests} 
             title="View Pending Requests"
-            className="relative p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+            className="relative p-2 bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] rounded-lg hover:bg-[var(--card-dark)] transition"
           >
             <Inbox size={20} />
-            {/* fixed red dot logic */}
             {hasPending && (
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm pointer-events-none animate-pulse" />
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[var(--card)] animate-pulse shadow-sm" />
             )}
           </button>
 
           <button
             onClick={onCreateAgenda}
-            className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            className="p-2 bg-[var(--button)] text-[var(--button-text)] rounded-lg hover:bg-[var(--button-dark)] transition shadow-sm active:scale-95"
           >
             <Plus size={20} />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-0 border-t border-l border-gray-200">
+      <div className="grid grid-cols-7 gap-0 border-t border-l border-[var(--border)]">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
           <div 
             key={day} 
-            className={`text-center font-bold py-2 text-sm border-r border-b border-gray-200 bg-gray-50 ${day === 'Sun' ? 'text-red-600' : 'text-gray-600'}`}
+            className="text-center font-bold text-[var(--foreground-muted)] py-2 text-sm border-r border-b border-[var(--border)] bg-[var(--background)]"
           >
             {day}
           </div>
