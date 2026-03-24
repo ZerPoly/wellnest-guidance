@@ -13,7 +13,7 @@ import {
 
 import { 
   TbLayoutSidebarRightCollapseFilled,
-  TbLayoutSidebarLeftCollapseFilled  
+  TbLayoutSidebarLeftCollapseFilled  
 } from "react-icons/tb";
 
 // Constant for localStorage key
@@ -30,8 +30,8 @@ interface SidebarProps {
 const TooltipWrapper: React.FC<{ content: string; children: React.ReactNode }> = ({ content, children }) => (
     <div className="relative group">
         {children}
-        <div className="absolute left-14 top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-zinc-700 text-white text-xs rounded-md 
-                     border border-zinc-600 shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 
+        <div className="absolute left-14 top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-[var(--title)] text-white text-xs rounded-md 
+                     border border-[var(--line)] shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 
                      transition-opacity duration-200 pointer-events-none z-50">
             {content}
         </div>
@@ -104,7 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen }) => {
 
   return (
     <aside
-      className={`h-screen bg-[var(--primary)] text-gray-200 flex flex-col transition-all duration-300 ${sidebarWidth} shadow-2xl shrink-0 p-4`}
+      className={`h-screen bg-[var(--dark-blue)] text-[var(--text-muted1)] flex flex-col transition-all duration-300 ${sidebarWidth} shadow-2xl shrink-0 p-4 border-r border-[var(--line)]`}
     >
       
       <div className="flex flex-col flex-1 gap-4">
@@ -125,7 +125,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen }) => {
                 <TooltipWrapper content={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
                     <button
                         onClick={toggleSidebar}
-                        className="text-2xl p-2 rounded-full hover:bg-zinc-700 transition-colors text-gray-300 hidden md:block"
+                        className="text-2xl p-2 rounded-full hover:bg-(--cyan) transition-colors text-(--button-text) hidden md:block"
                     >
                         {isCollapsed ? <TbLayoutSidebarRightCollapseFilled size={24} /> : <TbLayoutSidebarLeftCollapseFilled size={24} />}
                     </button>
@@ -133,32 +133,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen }) => {
             ) : (
                  <button
                     onClick={toggleSidebar}
-                    className="text-2xl p-2 rounded-full hover:bg-zinc-700 transition-colors text-gray-300 hidden md:block"
+                    className="text-2xl p-2 rounded-full hover:bg-(--cyan) transition-colors text-(--button-text) hidden md:block"
                 >
                     {isCollapsed ? <TbLayoutSidebarRightCollapseFilled size={24} /> : <TbLayoutSidebarLeftCollapseFilled size={24} />}
                 </button>
             )}
         </div>
 
-        {/* New Report Button */}
-        {/* {!isVisuallyCollapsed && ( // Use isVisuallyCollapsed
-          <button 
-            className="w-full bg-blue-700 text-white font-medium py-2.5 px-4 text-sm rounded-xl shadow-lg hover:bg-blue-600 transition-colors"
-          >
-            + New Report
-          </button>
-        )} */}
-
         {/* Navigation Links */}
-        <nav className="flex flex-col gap-1.5 pt-4 border-t border-zinc-800">
+        <nav className="flex flex-col gap-1.5 pt-4 border-t border-[var(--line)]">
           {filteredItems.map((item) => {
             // Determine active state based on URL path
             const isActive = isActiveLink(item.href); // <-- USING URL FOR TRUTH
             
             const linkClasses = `p-2.5 flex items-center cursor-pointer transition-colors text-sm rounded-xl ${
               isActive 
-                ? 'bg-zinc-700 font-medium text-white' 
-                : 'hover:bg-zinc-800 text-gray-300'
+                ? 'bg-[var(--cyan)] font-medium text-white' 
+                : 'hover:bg-(--bg1) text-[var(--text-muted1)]'
             }`;
 
             const linkContent = (
@@ -191,28 +182,28 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen }) => {
       </div>
 
       {/* Footer Section: Version, User, Sign Out */}
-      <div className="flex flex-col gap-2 pt-4 border-t border-zinc-700">
+      <div className="flex flex-col gap-2 pt-4 border-t border-[var(--line)]">
         
         {/* Version Indicator */}
         {!isVisuallyCollapsed && (
-            <div className="text-xs text-center text-gray-500 pb-2">
+            <div className="text-xs text-center text-[var(--foreground-placeholder)] pb-2">
                 v1.0.0
             </div>
         )}
 
         {/* User Info / Role */}
-        <div className={`p-2 rounded-xl text-gray-400 text-sm ${isVisuallyCollapsed ? 'text-center' : 'text-left'}`}>
+        <div className={`p-2 rounded-xl text-[var(--foreground-muted)] text-sm ${isVisuallyCollapsed ? 'text-center' : 'text-left'}`}>
             {isVisuallyCollapsed ? userRole?.charAt(0).toUpperCase() : (
                 <div className="flex flex-col">
                     <span className="font-semibold text-white text-sm">{userRole}</span>
-                    <span className="text-xs text-gray-400 truncate">{userEmail}</span>
+                    <span className="text-xs text-[var(--foreground-placeholder)] truncate">{userEmail}</span>
                 </div>
             )}
         </div>
 
         {/* Sign Out Button (NOW USES THE ROBUST HANDLER) */}
         <button 
-          className={`p-3 rounded-xl flex items-center transition-colors text-red-400 hover:bg-zinc-800 text-sm ${isVisuallyCollapsed ? 'justify-center' : ''}`}
+          className={`p-3 rounded-xl flex items-center transition-colors text-red-400 hover:bg-(--bg1) text-sm ${isVisuallyCollapsed ? 'justify-center' : ''}`}
           onClick={handleSidebarSignOut} // <-- USING NEW HANDLER
         >
           {isVisuallyCollapsed ? (
