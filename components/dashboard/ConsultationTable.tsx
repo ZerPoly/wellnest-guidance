@@ -15,7 +15,6 @@ interface Consultation {
   rawDate: Date;
 }
 
-// update: added props interface to fix typescript error
 interface ConsultationsTableProps {
   searchQuery: string;
   setSearchQuery: Dispatch<SetStateAction<string>>;
@@ -38,15 +37,14 @@ const mapAgendaToSessionType = (agenda: string): Consultation['sessionType'] => 
 
 const getBadgeClasses = (type: Consultation['sessionType']) => {
   switch (type) {
-    case 'Counseling': return 'bg-teal-400 text-teal-900';
-    case 'Routine Interview': return 'bg-indigo-600 text-indigo-100';
-    case 'Meeting': return 'bg-purple-50 text-purple-100';
-    case 'Event': return 'bg-pink-500 text-pink-100';
-    default: return 'bg-gray-200 text-gray-800';
+    case 'Counseling': return 'bg-teal-500/10 text-teal-700 border border-teal-200';
+    case 'Routine Interview': return 'bg-[var(--cyan)]/10 text-[var(--cyan)] border border-[var(--cyan)]/20';
+    case 'Meeting': return 'bg-purple-100 text-purple-700 border border-purple-200';
+    case 'Event': return 'bg-pink-100 text-pink-700 border border-pink-200';
+    default: return 'bg-[var(--line)] text-[var(--foreground-muted)] border border-[var(--line)]';
   }
 };
 
-// update: updated component signature to accept props
 const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
   searchQuery,
   setSearchQuery,
@@ -131,7 +129,6 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
 
   const displayData = activeTab === 'upcoming' ? upcomingConsultations : previousConsultations;
   
-  // note: filtering logic now uses the incoming sessiontypefilter
   let filteredData = displayData.filter(c => {
     const matchesSearch = c.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = sessionTypeFilter === "All" || c.sessionType === sessionTypeFilter;
@@ -155,8 +152,8 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
         onClick={() => setActiveTab(tab)}
         className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
           isActive 
-            ? 'bg-(--title) text-(--text1) shadow-md' 
-            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+            ? 'bg-[var(--title)] text-white shadow-md' 
+            : 'bg-[var(--line)] text-[var(--foreground-muted)] hover:bg-[var(--background-dark)]'
         }`}
       >
         {label}
@@ -171,11 +168,11 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
   };
 
   return (
-    <div className="flex-1 border border-(--outline) h-full bg-(--bg) p-4 rounded-2xl shadow-md">
+    <div className="flex-1 border border-[var(--line)] h-full bg-[var(--card)] p-4 rounded-2xl shadow-md">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 space-y-4 lg:space-y-0">
         <div className="flex items-center space-x-6">
-          <h2 className="text-2xl font-extrabold text-(--text-muted)">Consultations</h2>
-          <div className="flex space-x-2 p-2 bg-(--bg-dark) rounded-full">
+          <h2 className="text-2xl font-extrabold text-[var(--title)]">Consultations</h2>
+          <div className="flex space-x-2 p-2 bg-[var(--background-dark)] rounded-full">
             <TabButton tab="upcoming" label="Upcoming Consultations" />
             <TabButton tab="previous" label="Previous Consultations" />
           </div>
@@ -188,38 +185,38 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
               placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-2 pl-10 pr-4 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-shadow"
+              className="w-full py-2 pl-10 pr-4 bg-[var(--background-dark)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] text-sm transition-shadow text-[var(--foreground)]"
             />
-            <AiOutlineSearch size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+            <AiOutlineSearch size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--foreground-muted)]" />
           </div>
           
           <div className="relative">
             <button 
               onClick={() => setIsFilterOpen(prev => !prev)}
-              className={`p-2.5 bg-gray-100 border border-gray-300 rounded-lg transition-colors flex items-center ${isFilterOpen ? 'bg-gray-200 ring-2 ring-blue-500' : 'hover:bg-gray-200'}`}
+              className={`p-2.5 bg-[var(--background-dark)] border border-[var(--line)] rounded-lg transition-colors flex items-center ${isFilterOpen ? 'ring-2 ring-[var(--cyan)]' : 'hover:bg-[var(--line)]'}`}
               title="Filter options"
             >
-              <AiOutlineFilter size={20} className="text-gray-600" />
+              <AiOutlineFilter size={20} className="text-[var(--foreground)]" />
             </button>
             
             {isFilterOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-20 overflow-hidden">
-                <div className="p-3 font-bold text-xs text-gray-700 uppercase border-b">Sort By</div>
+              <div className="absolute right-0 mt-2 w-56 bg-[var(--card)] border border-[var(--line)] rounded-lg shadow-xl z-20 overflow-hidden">
+                <div className="p-3 font-bold text-xs text-[var(--foreground-muted)] uppercase border-b border-[var(--line)]">Sort By</div>
                 <button
                   onClick={() => handleSortChange('date', sortBy === 'date' && sortDirection === 'desc' ? 'asc' : 'desc')}
-                  className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex items-center justify-between w-full px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--background-dark)]"
                 >
-                  <span className="flex items-center"><AiOutlineCalendar className="mr-2" /> Date</span>
-                  <span className="text-xs font-semibold text-blue-600">
+                  <span className="flex items-center"><AiOutlineCalendar className="mr-2 text-[var(--cyan)]" /> Date</span>
+                  <span className="text-xs font-semibold text-[var(--cyan)]">
                     {sortBy === 'date' ? (sortDirection === 'desc' ? 'Newest ⬇️' : 'Oldest ⬆️') : 'Sort'}
                   </span>
                 </button>
                 <button
                   onClick={() => handleSortChange('email', sortBy === 'email' && sortDirection === 'asc' ? 'desc' : 'asc')}
-                  className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex items-center justify-between w-full px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--background-dark)]"
                 >
-                  <span className="flex items-center"><AiOutlineSortAscending className="mr-2" /> Email</span>
-                  <span className="text-xs font-semibold text-blue-600">
+                  <span className="flex items-center"><AiOutlineSortAscending className="mr-2 text-[var(--cyan)]" /> Email</span>
+                  <span className="text-xs font-semibold text-[var(--cyan)]">
                     {sortBy === 'email' ? (sortDirection === 'asc' ? 'A-Z' : 'Z-A') : 'Sort'}
                   </span>
                 </button>
@@ -230,38 +227,38 @@ const ConsultationsTable: React.FC<ConsultationsTableProps> = ({
       </div>
 
       {loading ? (
-        <div className="text-center py-8 text-gray-500">loading consultations...</div>
+        <div className="text-center py-8 text-[var(--foreground-muted)]">Loading consultations...</div>
       ) : error ? (
         <div className="text-center py-8 text-red-500">{error}</div>
       ) : (
-        <div className="overflow-x-auto rounded-xl">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+          <table className="min-w-full divide-y divide-[var(--line)]">
+            <thead className="bg-(--bg-light)">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium bg-(--bg-light) uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium bg-(--bg-light) uppercase tracking-wider">Session Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium bg-(--bg-light) uppercase tracking-wider">Time</th>
+                <th className="px-6 py-3 text-left text-xs font-medium bg-(--bg-light) uppercase tracking-wider">Date</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-(--bg-light) divide-y divide-[var(--line)]">
               {sortedData.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500 text-sm">
-                    no {activeTab} consultations found.
+                  <td colSpan={4} className="px-6 py-4 text-center text-[var(--foreground-muted)] text-sm">
+                    No {activeTab} consultations found.
                   </td>
                 </tr>
               ) : (
                 sortedData.map((consultation) => (
-                  <tr key={consultation.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{consultation.email}</td>
+                  <tr key={consultation.id} className="hover:bg-[var(--background-dark)] transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--title)]">{consultation.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className={`inline-flex items-center px-4 py-1 rounded-full text-xs font-semibold uppercase ${getBadgeClasses(consultation.sessionType)}`}>
                         {consultation.sessionType}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{consultation.time}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{consultation.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground-muted)]">{consultation.time}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground-muted)]">{consultation.date}</td>
                   </tr>
                 ))
               )}

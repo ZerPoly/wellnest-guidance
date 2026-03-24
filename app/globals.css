@@ -134,6 +134,12 @@
   --dark-blue: #002A54;
   --yellow: #ffbc00;
 
+  /* classifications */
+  --classification-red: #E63946;
+  --classification-yellow: #FFB703;
+  --classification-blue: #0056B3;
+  --classification-green: #06D6A0;
+
   /* basics */
   --background: #FAFAFA;
   --foreground:#3c3c3c;

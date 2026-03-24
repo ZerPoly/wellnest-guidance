@@ -60,7 +60,7 @@ function SignInFormContent() {
             Go to Dashboard
           </a>
           <button 
-            onClick={() => { router.push('/api/auth/signout'); }}
+            onClick={() => { router.push('/'); }}
             className="w-full mt-4 px-4 py-2 text-sm text-red-500 hover:text-red-700 transition"
           >
             Sign Out

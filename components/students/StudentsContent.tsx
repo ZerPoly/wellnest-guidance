@@ -156,10 +156,10 @@ const StudentsContent: React.FC = () => {
 
   const renderStatusText = (classification: ClassificationType) => {
     const color =
-      classification === "Excelling" ? "text-green-500" :
-      classification === "Thriving" ? "text-amber-500" :
-      classification === "Struggling" ? "text-[var(--cyan)]" :
-      classification === "InCrisis" ? "text-red-500" : "text-[var(--foreground-muted)]";
+      classification === "Excelling" ? "text-(--classification-green)" :
+      classification === "Thriving" ? "text-(--classification-yellow)" :
+      classification === "Struggling" ? "text-(--classification-blue)" :
+      classification === "InCrisis" ? "text-(--classification-red)" : "text-[var(--foreground-muted)]";
 
     const displayText = classification === "InCrisis" ? "In-Crisis" : classification;
 
@@ -171,15 +171,21 @@ const StudentsContent: React.FC = () => {
   };
 
   if (isSessionLoading) return (
-    <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[var(--primary)]"></div>
-    </div>
+      <div className="flex flex-col items-center">
+        <div className="relative w-12 h-12 mb-6">
+          <div className="absolute inset-0 border-4 border-[var(--outline)] rounded-2xl"></div>
+          <div className="absolute inset-0 border-4 border-t-[var(--cyan)] rounded-2xl animate-spin"></div>
+        </div>
+      </div>
   );
 
   if (loading) return (
-    <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[var(--cyan)]"></div>
-    </div>
+      <div className="flex flex-col items-center">
+        <div className="relative w-12 h-12 mb-6">
+          <div className="absolute inset-0 border-4 border-[var(--outline)] rounded-2xl"></div>
+          <div className="absolute inset-0 border-4 border-t-[var(--cyan)] rounded-2xl animate-spin"></div>
+        </div>
+      </div>
   );
 
   if (error) return (

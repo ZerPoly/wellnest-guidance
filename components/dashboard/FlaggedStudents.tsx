@@ -11,10 +11,10 @@ import {
 } from '@/lib/api/studentClassification'; 
 
 const CLASSIFICATION_COLORS: Record<StudentClassification['classification'], string> = {
-  'InCrisis': "hsl(0, 80%, 55%)",
-  'Struggling': "hsl(31, 100%, 61%)",
-  'Thriving': "hsl(180, 70%, 50%)",
-  'Excelling': "hsl(141, 86%, 46%)",
+  'InCrisis': "#E63946",
+  'Struggling': "#FFB703",
+  'Thriving': "#0056B3",
+  'Excelling': "#06D6A0",
 };
 
 const CHART_TITLE = "Student Classification Summary";
@@ -25,7 +25,6 @@ interface ChartDataPoint {
   fill: string;
 }
 
-// update: interface added to handle the incoming timeframe prop
 interface FlaggedStudentsProps {
   timeFilter: string;
 }
@@ -40,7 +39,7 @@ const aggregateDataForPie = (classifications: StudentClassification[]): ChartDat
     .map(([classification, count]) => ({
       name: classification,
       value: count,
-      fill: CLASSIFICATION_COLORS[classification as keyof typeof CLASSIFICATION_COLORS] || "hsl(0 0% 50%)",
+      fill: CLASSIFICATION_COLORS[classification as keyof typeof CLASSIFICATION_COLORS] || "var(--foreground-muted)",
     }))
     .filter(item => item.value > 0);
 };
@@ -49,16 +48,15 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const item = payload[0];
     return (
-      <div className="p-3 bg-white border border-gray-300 rounded-lg shadow-md text-sm text-gray-700">
+      <div className="p-3 bg-[var(--card)] border border-[var(--line)] rounded-lg shadow-md text-sm">
         <p className="font-bold mb-1" style={{ color: item.payload.fill }}>{item.name}</p>
-        <p>{`Students: ${item.value.toLocaleString()}`}</p>
+        <p className="text-[var(--foreground)]">{`Students: ${item.value.toLocaleString()}`}</p>
       </div>
     );
   }
   return null;
 };
 
-// update: component now accepts timefilter prop
 export default function FlaggedStudents({ timeFilter }: FlaggedStudentsProps) {
   const { data: session } = useSession();
   const token = session?.user?.accessToken;
@@ -81,7 +79,6 @@ export default function FlaggedStudents({ timeFilter }: FlaggedStudentsProps) {
     setError(null);
     
     try {
-      // note: you can use timefilter here to adjust your api call if needed
       const result: FetchStudentsResponse = await fetchStudents(token, { limit: 500 });
       if (result.success && result.data?.classifications) {
         setChartData(aggregateDataForPie(result.data.classifications));
@@ -101,27 +98,24 @@ export default function FlaggedStudents({ timeFilter }: FlaggedStudentsProps) {
 
   if (loading) {
     return (
-      <div className="flex-1 border border-(--outline) bg-(--bg) p-4 rounded-2xl shadow-md flex items-center justify-center min-h-[350px]">
-        <p className="text-gray-500 font-medium">loading classification data...</p>
+      <div className="flex-1 border border-[var(--line)] bg-[var(--card)] p-4 rounded-2xl shadow-md flex items-center justify-center min-h-[350px]">
+        <p className="text-[var(--foreground-muted)] font-medium">Loading classification data...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col flex-1 border border-(--outline) bg-(--bg) p-6 rounded-2xl shadow-md min-h-[350px]">
+    <div className="flex flex-col flex-1 border border-[var(--line)] bg-[var(--card)] p-6 rounded-2xl shadow-md min-h-[350px]">
       <header className="mb-2">
-        <h2 className="text-xl font-bold text-(--text-muted)">{CHART_TITLE}</h2>
+        <h2 className="text-xl font-bold text-[var(--title)]">{CHART_TITLE}</h2>
         <div className="flex justify-between items-center">
-          <p className="text-sm text-(--text-muted)">Total: {TOTAL_STUDENTS.toLocaleString()} Students</p>
-          <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
-            {timeFilter}
-          </span>
+          <p className="text-sm text-[var(--foreground-muted)]">Total: {TOTAL_STUDENTS.toLocaleString()} Students</p>
         </div>
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center">
         {TOTAL_STUDENTS === 0 ? (
-          <p className="text-gray-500 font-medium italic">no student data available to visualize.</p>
+          <p className="text-[var(--foreground-muted)] font-medium italic">No student data available to visualize.</p>
         ) : (
           <>
             <div className="w-full h-[220px]">
@@ -146,10 +140,10 @@ export default function FlaggedStudents({ timeFilter }: FlaggedStudentsProps) {
                         const { cx, cy } = viewBox;
                         return (
                           <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central">
-                            <tspan x={cx} y={cy - 5} className="fill-(--title) text-3xl font-bold">
+                            <tspan x={cx} y={cy - 5} className="fill-[var(--title)] text-3xl font-bold">
                               {TOTAL_STUDENTS}
                             </tspan>
-                            <tspan x={cx} y={cy + 20} className="fill-(--text-muted) text-sm font-medium">
+                            <tspan x={cx} y={cy + 20} className="fill-[var(--foreground-muted)] text-sm font-medium">
                               Total Students
                             </tspan>
                           </text>
@@ -169,7 +163,7 @@ export default function FlaggedStudents({ timeFilter }: FlaggedStudentsProps) {
                     style={{ backgroundColor: entry.fill }} 
                   />
                   <span 
-                    className="text-sm font-semibold text-(--text-muted)"
+                    className="text-sm font-semibold text-[var(--foreground-muted)]"
                   >
                     {entry.name}
                   </span>
@@ -180,10 +174,10 @@ export default function FlaggedStudents({ timeFilter }: FlaggedStudentsProps) {
         )}
       </div>
 
-      <footer className="pt-4 mt-4 border-t border-(--outline)">
-        <div className="flex items-center gap-2 text-sm font-medium text-(--text-muted)">
-          <span>aggregated data from {TOTAL_STUDENTS} students.</span>
-          <TrendingUp className="h-4 w-4" /> 
+      <footer className="pt-4 mt-4 border-t border-[var(--line)]">
+        <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground-muted)]">
+          <span>Aggregated data from {TOTAL_STUDENTS} students.</span>
+          <TrendingUp className="h-4 w-4 text-[var(--cyan)]" /> 
         </div>
       </footer>
     </div>

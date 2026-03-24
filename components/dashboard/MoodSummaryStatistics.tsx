@@ -40,25 +40,25 @@ const MoodSummaryStatistics = () => {
 
   const currentData = view === 'weekly' ? weeklyData : monthlyData;
 
-  if (!mounted) return <div className="min-h-[350px] animate-pulse bg-gray-100 rounded-2xl" />;
+  if (!mounted) return <div className="min-h-[350px] animate-pulse bg-[var(--card-dark)] rounded-2xl" />;
 
   return (
-    <div className="flex flex-col border border-(--outline) bg-(--bg) p-6 rounded-2xl shadow-md min-h-[350px]">
+    <div className="flex flex-col border border-[var(--line)] bg-[var(--card)] p-6 rounded-2xl shadow-md min-h-[350px]">
       {/* Header with Filter */}
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-xl font-bold text-(--text-muted)">Student Sentiment</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-xl font-bold text-[var(--title)]">Student Sentiment</h2>
+          <p className="text-sm text-[var(--foreground-muted)]">
             {view === 'weekly' ? 'Daily frequency tracking' : 'Monthly aggregate volume'}
           </p>
         </div>
 
         {/* --- Filter Toggle --- */}
-        <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
+        <div className="flex bg-[var(--card-dark)] p-1 rounded-xl border border-[var(--line)]">
           <button 
             onClick={() => setView('weekly')}
             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              view === 'weekly' ? 'bg-white shadow-sm text-purple-700' : 'text-gray-500 hover:text-gray-700'
+              view === 'weekly' ? 'bg-[var(--card)] shadow-sm text-[var(--cyan)]' : 'text-[var(--foreground-muted)] hover:text-[var(--foreground)]'
             }`}
           >
             Weekly
@@ -66,7 +66,7 @@ const MoodSummaryStatistics = () => {
           <button 
             onClick={() => setView('monthly')}
             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              view === 'monthly' ? 'bg-white shadow-sm text-purple-700' : 'text-gray-500 hover:text-gray-700'
+              view === 'monthly' ? 'bg-[var(--card)] shadow-sm text-[var(--cyan)]' : 'text-[var(--foreground-muted)] hover:text-[var(--foreground)]'
             }`}
           >
             Monthly
@@ -78,23 +78,31 @@ const MoodSummaryStatistics = () => {
       <div className="w-full h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={currentData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--outline)" />
+            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--line)" />
             <XAxis 
               dataKey="name" 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fontSize: 11, fill: '#888' }} 
+              tick={{ fontSize: 11, fill: 'var(--foreground-muted)' }} 
             />
             <YAxis 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fontSize: 11, fill: '#888' }} 
+              tick={{ fontSize: 11, fill: 'var(--foreground-muted)' }} 
             />
             <Tooltip 
-              cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+              cursor={{ fill: 'var(--card-dark)', opacity: 0.4 }}
+              contentStyle={{ 
+                backgroundColor: 'var(--card)', 
+                borderRadius: '12px', 
+                border: '1px solid var(--line)', 
+                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                color: 'var(--foreground)'
+              }}
+              itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+              labelStyle={{ color: 'var(--title)', fontWeight: 'bold', marginBottom: '4px' }}
             />
-            <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+            <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '12px', fontWeight: 'bold' }} />
             
             <Bar dataKey="Anxious" stackId="a" fill={MOOD_COLORS.Anxious} />
             <Bar dataKey="Stressed" stackId="a" fill={MOOD_COLORS.Stressed} />
