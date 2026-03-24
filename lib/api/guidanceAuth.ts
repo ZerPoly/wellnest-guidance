@@ -17,7 +17,7 @@ export interface AuthResponse {
 
 export async function guidanceLogin(email: string, password: string): Promise<AuthResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}}/api/v1/auth/counselor/login`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/counselor/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

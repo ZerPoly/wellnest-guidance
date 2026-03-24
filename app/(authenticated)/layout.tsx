@@ -4,6 +4,7 @@ import React from "react";
 import { authOptions } from "@/lib/authOptions";
 
 import AuthenticatedLayoutClient from "@/components/AuthenticatedLayoutClient";
+import TokenDebugger from "@/components/TokenDebugger";
 
 
 interface AuthenticatedLayoutProps {
@@ -17,5 +18,10 @@ export default async function AuthenticatedLayout({ children }: AuthenticatedLay
       redirect("/"); 
     }
     
-    return <AuthenticatedLayoutClient>{children}</AuthenticatedLayoutClient>;
+    return (
+      <AuthenticatedLayoutClient>
+        <TokenDebugger/>
+        {children}
+      </AuthenticatedLayoutClient>
+    );
 }

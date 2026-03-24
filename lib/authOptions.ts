@@ -2,14 +2,14 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { unifiedLogin } from "@/lib/api/unifiedAuth";
 import { refreshCounselorToken } from "@/lib/api/counselorRefresh";
+import { refreshAdminToken } from "@/lib/api/adminRefresh";
 import { jwtDecode } from "jwt-decode";
 
-// Helper type for decoded token
 interface DecodedToken {
-  sub: string; // Standard JWT subject (this should be the user_id)
-  user_id?: string; // Fallback
+  sub: string;
+  user_id?: string;
   role: "admin" | "counselor" | "super_admin";
-  exp: number; // Expiration time in seconds
+  exp: number;
   iat: number;
 }
 
@@ -39,28 +39,25 @@ export const authOptions: NextAuthOptions = {
 
         try {
           const decoded = jwtDecode<DecodedToken>(result.data.access_token);
-          
+
           const claim = decoded.role;
           if (claim === "admin") roleFromToken = "admin";
           else if (claim === "counselor") roleFromToken = "counselor";
           else if (claim === "super_admin") roleFromToken = "super_admin";
 
-          // Get the user's ID (sub is standard)
-          idFromToken = decoded.sub || decoded.user_id; 
-          tokenExpires = decoded.exp * 1000; // Convert seconds to milliseconds
+          idFromToken = decoded.sub || decoded.user_id;
+          tokenExpires = decoded.exp * 1000;
 
           if (!idFromToken) {
             throw new Error("Token missing 'sub' (user_id) claim.");
           }
-
         } catch (err) {
           console.error("Failed to decode access token:", err);
           throw new Error("Invalid access token received from server.");
         }
 
-        // Return the full user object to be stored in the JWT
         return {
-          id: idFromToken, 
+          id: idFromToken,
           email: credentials.email,
           role: roleFromToken,
           accessToken: result.data.access_token,
@@ -72,7 +69,7 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, account }) {
-      // 1. Initial sign-in
+      // 1. Initial sign-in — persist everything from authorize()
       if (account && user) {
         return {
           ...token,
@@ -83,22 +80,26 @@ export const authOptions: NextAuthOptions = {
         };
       }
 
-      // 2. Token is still valid, return it
+      // 2. Token still valid — return as-is
       if (Date.now() < (token.accessTokenExpires as number)) {
         return token;
       }
 
-      // 3. Access token has expired, try to refresh it
-      console.log("Access token expired. Refreshing...");
+      // 3. Token expired — refresh using the correct endpoint based on role
+      console.log(`Access token expired for role: ${token.role}. Refreshing...`);
+
       try {
         if (!token.sub) {
           throw new Error("Token is missing 'sub' (user_id).");
         }
-        
-        const response = await refreshCounselorToken(
-          token.sub,
-          token.refreshToken as string
-        );
+
+        const isAdmin =
+          token.role === "admin" || token.role === "super_admin";
+
+        // ✅ Call the correct refresh endpoint based on role
+        const response = isAdmin
+          ? await refreshAdminToken(token.sub, token.refreshToken as string)
+          : await refreshCounselorToken(token.sub, token.refreshToken as string);
 
         if (!response.success || !response.data) {
           console.error("Refresh API returned failure:", response.message);
@@ -106,19 +107,18 @@ export const authOptions: NextAuthOptions = {
         }
 
         const { access_token, refresh_token } = response.data;
-        
-        // Decode new token to get its expiration
         const decoded = jwtDecode<{ exp: number }>(access_token);
 
+        console.log(`✅ Token refreshed successfully for role: ${token.role}`);
+
         return {
-          ...token, 
+          ...token,
           accessToken: access_token,
           refreshToken: refresh_token,
           accessTokenExpires: decoded.exp * 1000,
         };
-
       } catch (error) {
-        console.error("Error refreshing access token", error);
+        console.error("Error refreshing access token:", error);
         return {
           ...token,
           error: "RefreshAccessTokenError",
@@ -127,21 +127,21 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
-      session.user.id = token.sub; 
+      session.user.id = token.sub;
       session.user.email = token.email;
       session.user.role = token.role;
       session.user.accessToken = token.accessToken;
-      
-      if (token.role === 'counselor') {
+
+      if (token.role === "counselor") {
         session.counselorToken = token.accessToken as string;
-      } else if (token.role === 'admin' || token.role === 'super_admin') {
+      } else if (token.role === "admin" || token.role === "super_admin") {
         session.adminToken = token.accessToken as string;
       }
-      
+
       if (token.error) {
         session.error = token.error;
       }
-      
+
       return session;
     },
   },
@@ -151,7 +151,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

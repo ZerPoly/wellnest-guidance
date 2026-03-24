@@ -128,8 +128,43 @@
 }
 
 
+/* light mode */
 :root {
-  /* LIGHT MODE */
+  /* single colors */
+  --dark-blue: #002A54;
+  --yellow: #ffbc00;
+
+  /* basics */
+  --background: #FAFAFA;
+  --foreground:#3c3c3c;
+  --foreground-muted: hsl(200, 6%, 29%);
+  --foreground-placeholder: hsl(200, 6%, 60%);
+
+  /* cards */
+  --card: #FFFFFF;
+  --card-dark: #f1f1f1;
+  --border: #BFBFBF;
+  --line: #E2E2E2;
+
+  /* texts */
+  --title: #002A54;
+  
+
+  /* button */
+  --button: hsl(180, 100%, 40%);
+  --button-dark: hsl(180, 100%, 30%);
+  --button-text: #FFFFFF;
+
+  /* calendar in appointments */
+  --today-bg: hsl(180, 100%, 97%); /* very light cyan tint */
+  --disabled-bg: #EBEBEB;         /* distinct darker gray for light mode */
+  --accent-blue: #2563eb;
+  --accent-blue-hover: #1d4ed8;
+
+
+
+  /* ---------------------------------------------- */
+
   --bg-dark: hsl(220, 10%, 90%);
   --bg: hsl(220, 21%, 95%);
   --bg-light: hsl(220, 100%, 100%);
@@ -152,7 +187,7 @@
 
 
   /* BORDERS */
-  --border: hsl(220, 4%, 51%);
+  /* --border: hsl(220, 4%, 51%); */
 
 
   /* PRIMARY COLORS PURPLE */
@@ -186,15 +221,43 @@
   --orange-lighter: hsl(23, 100%, 90%);
 
   /* TITLES */
-  --title: hsl(263, 83%, 34%);
+  /* --title: hsl(263, 83%, 34%); */
   /* FOOTER TEXT */
   --footer-text: hsl(195, 5%, 84%);
   --auth-text: hsl(220, 46%,96%);
 
 }
 
+/* dark mode */
 .dark{
-  /* DARK MODE */
+  /* basics */
+  --background: #131F24;
+  --foreground:#e5e5e5;
+  --foreground-muted: hsl(200, 6%, 70%);
+
+  /* cards */
+  --card: #202F36;
+  --card-dark: #1A282E;
+  --border: #03BFBF;
+  --line: #37464F;
+
+  --title: #03BFBF;
+
+  /* button */
+  --button: hsl(180, 100%, 40%);
+  --button-dark: hsl(180, 100%, 30%);
+  --button-text: #FFF;
+
+  /* calendar in appointments */
+  --today-bg: hsla(180, 100%, 40%, 0.1);
+  --disabled-bg: #1A1A1A;         /* darker than surface for dark mode */
+  --accent-blue: #3b82f6;
+  --accent-blue-hover: #2563eb;
+
+
+  /* ---------------------------------------------- */
+
+
   --bg-dark: hsl(222, 22%, 1%);
   --bg: hsl(220, 10%, 8%);
   --bg-light: hsl(220, 7%, 12%);
@@ -208,7 +271,7 @@
   --text-muted: hsl(200, 6%, 70%);
 
   /* TITLE */
-  --title: hsl(263, 83%, 60%); 
+  /* --title: hsl(263, 83%, 60%);  */
   /* FOOTER TEXT */
   /* --footer-text: hsl(200, 6%, 70%); */
   /* OUTLINE */
