@@ -74,9 +74,9 @@ export default function Modal({
         cursor: 'default'
       }}
     >
-      {/* Backdrop with Gaussian blur and crystal-like effect */}
+      {/* Backdrop with Gaussian blur */}
       <div
-        className="absolute inset-0 bg-black/30 backdrop-blur transition-all duration-300"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-all duration-300"
         style={{ 
           pointerEvents: 'auto',
           cursor: closeOnBackdropClick ? 'pointer' : 'default',
@@ -87,9 +87,10 @@ export default function Modal({
         aria-hidden="true"
       />
 
-      {/* Modal Content - FIXED: Added pointer-events to allow interaction */}
+      {/* Modal Content */}
+      {/* FIXED: bg-[var(--bg)] -> bg-[var(--card)], border border-[var(--line)] added */}
       <div
-        className={`relative bg-[var(--bg)] rounded-2xl shadow-2xl w-full ${sizeClasses[size]} ${className} transform transition-all animate-modal-appear`}
+        className={`relative bg-[var(--card)] border border-[var(--line)] rounded-2xl shadow-2xl w-full ${sizeClasses[size]} ${className} transform transition-all animate-modal-appear`}
         style={{
           pointerEvents: 'auto',
           userSelect: 'text',
@@ -102,11 +103,12 @@ export default function Modal({
       >
         {/* Header */}
         {showHeader && (
-          <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--line)]">
             {title && (
               <h2
                 id="modal-title"
-                className="text-xl font-extrabold text-gray-800 font-['Metropolis']"
+                /* FIXED: text-gray-800 -> text-[var(--title)] */
+                className="text-xl font-extrabold text-[var(--title)] font-['Metropolis']"
               >
                 {title}
               </h2>
@@ -114,7 +116,8 @@ export default function Modal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="ml-auto text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
+                /* FIXED: text-gray-400 -> text-[var(--foreground-muted)], hover colors updated */
+                className="ml-auto text-[var(--foreground-muted)] hover:text-[var(--title)] transition-colors p-1.5 rounded-full hover:bg-[var(--background-dark)]"
                 style={{ cursor: 'pointer' }}
                 aria-label="Close modal"
               >
@@ -132,21 +135,3 @@ export default function Modal({
     </div>
   );
 }
-
-// Add these styles to your global CSS file (globals.css or app/globals.css)
-/*
-@keyframes modal-appear {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-modal-appear {
-  animation: modal-appear 0.2s ease-out;
-}
-*/

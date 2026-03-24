@@ -45,10 +45,6 @@ const DashboardContent = ({}: DashboardContentProps) => {
       
       {/* kpi and chart row */}
       <div className="flex flex-col md:flex-row gap-6">
-        {/* chart 1: consultation volume */}
-        <div className="flex-1">
-          <ConsultationStatistics timeFilter={chartFilter} />
-        </div>
         {/* chart 2: student classification/flagged */}
         <div className="flex-1">
           <FlaggedStudents timeFilter={chartFilter} />

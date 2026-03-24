@@ -1,26 +1,26 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { AiOutlineSearch, AiOutlineFilter, AiOutlineEdit, AiOutlineDelete } from 'react-icons/ai';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { AiOutlineSearch, AiOutlineFilter, AiOutlineEdit, AiOutlineDelete, AiOutlineLeft, AiOutlineRight } from 'react-icons/ai';
+import { LuLoaderCircle } from 'react-icons/lu';
 
-interface TableProps<T extends { id: string }> {
-  title?: string;
+interface TableProps<T extends { id: string; status: string; year?: string | number }> {
   tabs: string[];
   columns: string[];
-  fetchData: (activeTab: string) => T[];
+  fetchData: (activeTab: string, cursor?: string) => Promise<{ items: T[]; hasMore: boolean; nextCursor: string | null }>;
   renderRow: (item: T) => React.ReactNode;
   actionTab?: string;
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   searchFilter: (item: T, query: string) => boolean;
-  filterOptions?: { label: string; value: string }[];  
-  onFilterChange?: (value: string) => void;    
-  headerAction?: React.ReactNode;    
-  onTabChange?: (tab: string) => void;     
+  // Enhanced Filter Options
+  statusFilterOptions?: { label: string; value: string }[];
+  yearFilterOptions?: { label: string; value: string }[];
+  headerAction?: React.ReactNode;
+  onTabChange?: (tab: string) => void;
 }
 
-function TableComponent<T extends { id: string }>({
-  title = 'Table',
+function TableComponent<T extends { id: string; status: string; year?: string | number }>({
   tabs,
   columns,
   fetchData,
@@ -28,146 +28,240 @@ function TableComponent<T extends { id: string }>({
   actionTab,
   onEdit,
   onDelete,
-  searchFilter,  
+  searchFilter,
   onTabChange,
-  headerAction,     
-  filterOptions,      
-  onFilterChange
+  headerAction,
+  statusFilterOptions = [
+    { label: 'All Status', value: 'All' },
+    { label: 'Active', value: 'Active' },
+    { label: 'Inactive', value: 'Inactive' }
+  ],
+  yearFilterOptions = [
+    { label: 'All Years', value: 'All' },
+    { label: '1st Year',  value: 'Year First Year' },
+    { label: '2nd Year',  value: 'Year Second Year' },
+    { label: '3rd Year',  value: 'Year Third Year' },
+    { label: '4th Year',  value: 'Year Fourth Year' },
+  ],
 }: TableProps<T>) {
-  const [activeTab,    setActiveTab]    = useState(tabs[0]);
+  const [activeTab, setActiveTab] = useState(tabs[0]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterOpen,  setFilterOpen]  = useState(false);
-  const [items,       setItems]       = useState<T[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [filterOpen, setFilterOpen] = useState(false);
+  
+  const [items, setItems] = useState<T[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const handleTabChange = (tab: string) => {
-  setActiveTab(tab);
-  onTabChange?.(tab); 
-};
+  // Filter States
+  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedYear, setSelectedYear] = useState('All');
 
-  useEffect(() => {
+  // Pagination State
+  const [hasMore, setHasMore] = useState(false);
+  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([]);
+  const [currentCursor, setCurrentCursor] = useState<string | null>(null);
+
+  const loadData = useCallback(async (tab: string, cursor: string | null) => {
     setLoading(true);
     setError(null);
     try {
-      const data = fetchData(activeTab);
-      setItems(data);
-    } catch {
-      setError('failed to load data');
+      const result = await fetchData(tab, cursor || undefined);
+      setItems(result.items);
+      setHasMore(result.hasMore);
+      setCurrentCursor(result.nextCursor);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [fetchData]);
 
-  const displayed = items.filter((item) => searchFilter(item, searchQuery));
+  useEffect(() => {
+    setCursorHistory([]);
+    loadData(activeTab, null);
+  }, [activeTab, loadData]);
+
+  // Combined Filtering Logic
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const matchesSearch = searchFilter(item, searchQuery);
+      const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
+      
+      // Normalize strings by trimming and removing extra internal spaces if necessary
+      const itemYear = item.year?.toString().trim();
+      const matchesYear = selectedYear === 'All' || itemYear === selectedYear;
+
+      return matchesSearch && matchesStatus && matchesYear;
+    });
+  }, [items, searchQuery, selectedStatus, selectedYear, searchFilter]);
+
+  const handleNextPage = () => {
+    if (!currentCursor || loading) return;
+    setCursorHistory(prev => [...prev, currentCursor]); 
+    loadData(activeTab, currentCursor);
+  };
+
+  const handlePrevPage = () => {
+    if (cursorHistory.length === 0 || loading) return;
+    const newHistory = [...cursorHistory];
+    newHistory.pop();
+    const prevCursor = newHistory.length > 0 ? newHistory[newHistory.length - 1] : null;
+    setCursorHistory(newHistory);
+    loadData(activeTab, prevCursor);
+  };
+
   const showActions = actionTab && activeTab === actionTab;
-  const allColumns  = showActions ? [...columns, 'Actions'] : columns;
+  const allColumns = showActions ? [...columns, 'Actions'] : columns;
 
   return (
-    <div className="flex-1 border border-(--outline) h-full bg-(--bg) rounded-2xl shadow-md p-4">
-     {/* header */}
-      <div className="flex flex-col lg:flex-row justify-between items-center mb-6 space-y-4 lg:space-y-0">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-lg sm:text-xl lg:text-2xl font-extrabold text-(--text-muted)">{title}</h2>
-          <div className="flex space-x-2 p-2 bg-(--bg-dark) rounded-full">
-            {tabs.map((tab) => (
-              <button key={tab} onClick={() => handleTabChange(tab)}
-                className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
-                  activeTab === tab
-                    ? 'bg-(--title) text-(--text1) shadow-md'
-                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                }`}
-              >{tab}</button>
-            ))}
-          </div>
-        </div>
-        
-        {/* filter and tabs */}
-        <div className="flex items-center space-x-3 w-full lg:w-auto">
-          <div className="relative flex-1">
-            <input placeholder="Search" value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-2 pl-10 pr-4 bg-gray-100 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-700"
-            />
-            <AiOutlineSearch size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-          </div>
-          <div className="relative">
-            <button onClick={() => setFilterOpen((p) => !p)}
-              className={`p-2.5 bg-gray-100 border border-gray-300 rounded-lg flex items-center ${filterOpen ? 'ring-2 ring-purple-700' : 'hover:bg-gray-200'}`}>
-              <AiOutlineFilter size={20} className="text-gray-600" />
+    <div className="flex-1 border border-[var(--line)] flex flex-col h-full bg-[var(--card)] rounded-2xl shadow-md p-4">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex space-x-2 p-1.5 bg-[var(--background-dark)] rounded-full border border-[var(--line)]">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => { setActiveTab(tab); setCursorHistory([]); }}
+              className={`px-6 py-2 text-sm font-bold rounded-full transition-all ${
+                activeTab === tab ? 'bg-[var(--title)] text-white shadow-md' : 'text-[var(--foreground-muted)] hover:text-[var(--title)]'
+              }`}
+            >
+              {tab}
             </button>
-          
-        {filterOpen && filterOptions && (
-          <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-20 overflow-hidden">
-            <p className="p-3 font-bold text-xs text-gray-700 uppercase border-b">Filter</p>
-            {filterOptions.map((option) => (
-              <button key={option.value}
-                onClick={() => {
-                  setActiveFilter(option.value);
-                  onFilterChange?.(option.value);
-                  setFilterOpen(false);
-                }}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                  activeFilter === option.value ? 'font-semibold text-purple-700' : 'text-gray-700'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          <div className="relative flex-1 lg:w-64">
+            <AiOutlineSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)]" />
+            <input
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full py-2.5 pl-10 pr-4 bg-[var(--background-dark)] border border-[var(--line)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--cyan)] outline-none text-[var(--foreground)]"
+            />
+          </div>
+
+          {/* Filter Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setFilterOpen(!filterOpen)}
+              className={`p-2.5 bg-[var(--background-dark)] border border-[var(--line)] rounded-xl flex items-center transition-all ${filterOpen ? 'border-[var(--cyan)] ring-2 ring-[var(--cyan)]/20' : ''}`}
+            >
+              <AiOutlineFilter size={20} className={filterOpen ? 'text-[var(--cyan)]' : 'text-[var(--foreground-muted)]'} />
+            </button>
+
+            {filterOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-[var(--card)] border border-[var(--line)] rounded-2xl shadow-2xl z-[50] overflow-hidden p-2">
+                <div className="p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--foreground-muted)] mb-3">Status</p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {statusFilterOptions.map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setSelectedStatus(opt.value)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${selectedStatus === opt.value ? 'bg-[var(--cyan)] border-[var(--cyan)] text-white' : 'bg-[var(--background-dark)] border-[var(--line)] text-[var(--foreground-muted)]'}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--foreground-muted)] mb-3">Year Level</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {yearFilterOptions.map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setSelectedYear(opt.value)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${selectedYear === opt.value ? 'bg-[var(--cyan)] border-[var(--cyan)] text-white' : 'bg-[var(--background-dark)] border-[var(--line)] text-[var(--foreground-muted)]'}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          {headerAction}
+        </div>
+      </div>
+
+      {/* Table Content */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-3 text-[var(--foreground-muted)]">
+            <LuLoaderCircle size={32} className="animate-spin text-[var(--cyan)]" />
+            <span className="text-sm font-bold">Syncing Records...</span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-[var(--line)] no-scrollbar">
+            <table className="min-w-full divide-y divide-[var(--line)]">
+              <thead className="bg-[var(--background-dark)]">
+                <tr>
+                  {allColumns.map((h) => (
+                    <th key={h} className="px-6 py-4 text-left text-[10px] font-black text-[var(--foreground-muted)] uppercase tracking-widest">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-[var(--card)] divide-y divide-[var(--line)]">
+                {filteredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={allColumns.length} className="px-6 py-16 text-center text-[var(--foreground-muted)] text-sm italic font-medium">
+                      No results found for current filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-[var(--background-dark)]/50 transition-colors">
+                      {renderRow(item)}
+                      {showActions && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => onEdit?.(item)} className="p-2 rounded-lg text-[var(--cyan)] bg-[var(--cyan)]/10 hover:bg-[var(--cyan)]/20 transition-colors">
+                              <AiOutlineEdit size={18} />
+                            </button>
+                            <button onClick={() => onDelete?.(item)} className="p-2 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors">
+                              <AiOutlineDelete size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
-                
-        {headerAction}
-        </div> 
-      </div>
 
-      {/* table */}
-      {loading ? <p className="text-center py-8 text-gray-500">loading...</p>
-       : error  ? <p className="text-center py-8 text-red-500">{error}</p>
-       : (
-      <div className="overflow-x-auto rounded-xl">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {allColumns.map((h) => (
-                <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {displayed.length === 0
-              ? <tr><td colSpan={allColumns.length} className="px-6 py-4 text-center text-gray-500 text-sm">no data found.</td></tr>
-              : displayed.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  {renderRow(item)}
-
-                {/* actions column for tab with actions */}
-                {showActions && (
-                  <td className="px-6 py-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      {onEdit && (
-                        <button onClick={() => onEdit(item)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors">
-                              <AiOutlineEdit size={16} />
-                            </button>
-                          )}
-                       {onDelete && (
-                          <button onClick={() => onDelete(item)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
-                            <AiOutlineDelete size={16} />
-                          </button>
-                        )}
-                      </div>
-                  </td>
-                 )}
-                </tr>
-                ))
-              }
-            </tbody>
-          </table>
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-6 px-2">
+        <p className="text-xs font-bold text-[var(--foreground-muted)]">
+          Page {cursorHistory.length + 1}
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handlePrevPage}
+            disabled={cursorHistory.length === 0 || loading}
+            className="flex items-center gap-2 px-5 py-2 text-xs font-black uppercase rounded-xl border border-[var(--line)] text-[var(--foreground-muted)] hover:bg-[var(--background-dark)] disabled:opacity-20 transition-all"
+          >
+            <AiOutlineLeft size={14} /> Prev
+          </button>
+          <button
+            onClick={handleNextPage}
+            disabled={!hasMore || loading}
+            className="flex items-center gap-2 px-5 py-2 text-xs font-black uppercase rounded-xl bg-[var(--cyan)] text-white hover:bg-[var(--cyan-dark)] disabled:opacity-20 shadow-lg shadow-[var(--cyan)]/20 transition-all"
+          >
+            Next <AiOutlineRight size={14} />
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
+
 export default TableComponent;
