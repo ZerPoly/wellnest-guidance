@@ -62,11 +62,11 @@ const AccessPasswordModal: React.FC<AccessPasswordModalProps> = ({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-md z-50">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-8 relative">
-        <h2 className="text-xl font-bold mb-2 text-gray-800">
+      <div className="bg-[var(--card)] w-full max-w-md rounded-2xl shadow-xl p-8 relative border border-[var(--line)]">
+        <h2 className="text-xl font-bold mb-2 text-[var(--title)]">
           Security Verification
         </h2>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-[var(--foreground-muted)] mb-6">
           Please enter your password to view sensitive student information.
         </p>
 
@@ -77,13 +77,13 @@ const AccessPasswordModal: React.FC<AccessPasswordModalProps> = ({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter access password"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+              className="w-full bg-[var(--background)] border border-[var(--line)] rounded-xl px-4 py-3 pr-12 text-[var(--foreground)] focus:ring-2 focus:ring-[var(--cyan)] outline-none transition-all placeholder-[var(--foreground-placeholder)]"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors"
             >
               {showPassword ? (
                 <AiFillEyeInvisible size={22} />
@@ -94,7 +94,7 @@ const AccessPasswordModal: React.FC<AccessPasswordModalProps> = ({
           </div>
 
           {errorMessage && (
-            <p className="text-xs text-red-500 font-semibold bg-red-50 p-2 rounded-lg">
+            <p className="text-xs text-red-500 font-semibold bg-red-500/10 p-3 rounded-lg border border-red-500/20">
               {errorMessage}
             </p>
           )}
@@ -103,14 +103,14 @@ const AccessPasswordModal: React.FC<AccessPasswordModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-3 rounded-xl border border-[var(--line)] text-[var(--foreground-muted)] font-semibold hover:bg-[var(--background)] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isVerifying}
-              className="flex-1 px-4 py-3 rounded-xl bg-[#460F9D] hover:bg-[#350b77] text-white font-bold shadow-md transition-all disabled:opacity-50"
+              className="flex-1 px-4 py-3 rounded-xl bg-[var(--cyan)] hover:bg-[var(--cyan-dark)] text-white font-bold shadow-md transition-all disabled:opacity-50 active:scale-95"
             >
               {isVerifying ? "Verifying..." : "View Details"}
             </button>
