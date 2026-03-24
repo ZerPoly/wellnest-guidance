@@ -8,7 +8,7 @@ import {
 
 // Define the shape of a navigation item for type safety
 export interface NavItem {
-  name: "Dashboard" | "Calendar" | "Students" | "Settings" | "Admin Tools";
+  name: "Dashboard" | "Calendar" | "Students" | "Settings" | "Admin Dashboard" | "Users";
   icon: React.ElementType; // The component type for the React Icon
   roles: Array<'admin' | 'counselor' | 'super_admin'>;
   href: string; // The Next.js route path
@@ -16,11 +16,13 @@ export interface NavItem {
 
 // Navigation Links with role restrictions
 export const NAV_ITEMS: NavItem[] = [
-  { name: "Dashboard", icon: AiOutlineDashboard, roles: ['counselor', 'super_admin'], href: '/dashboard' },
-  { name: "Calendar", icon: AiOutlineCalendar, roles: ['counselor', 'super_admin'], href: '/calendar' },
-  { name: "Students", icon: AiOutlineTeam, roles: ['counselor', 'super_admin'], href: '/students' },
-  { name: "Admin Tools", icon: AiOutlineTool, roles: ['admin', 'super_admin'], href: '/admin' },
-  {name: "Dashboard", icon: AiOutlineDashboard, roles: ['admin', 'super_admin'], href: '/adminDashboard' },
-  {name: "Users", icon: AiOutlineTeam, roles: ['admin', 'super_admin'], href: '/users' },
+  // guidance module
+  { name: "Dashboard", icon: AiOutlineDashboard, roles: ['counselor'], href: '/dashboard' },
+  { name: "Calendar", icon: AiOutlineCalendar, roles: ['counselor'], href: '/calendar' },
+  { name: "Students", icon: AiOutlineTeam, roles: ['counselor'], href: '/students' },
+
+  // admin module
+  { name: "Admin Dashboard", icon: AiOutlineDashboard, roles: ['admin', 'super_admin'], href: '/adminDashboard' },
+  { name: "Users", icon: AiOutlineTeam, roles: ['admin', 'super_admin'], href: '/users' },
   // { name: "Settings", icon: AiOutlineSetting, roles: ['admin', 'counselor', 'super_admin'], href: '/settings' },
 ];
