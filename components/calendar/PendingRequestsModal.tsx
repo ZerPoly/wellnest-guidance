@@ -83,7 +83,7 @@ export default function PendingRequestsModal({
               return (
                 <div 
                   key={agenda.id} 
-                  onClick={() => { onAgendaClick(agenda); onClose(); }} 
+                  onClick={() => { onAgendaClick(agenda); }}
                   className="p-4 bg-[var(--bg)] border border-[var(--outline)] rounded-xl cursor-pointer hover:border-[var(--cyan)] transition-all group"
                 >
                   <div className="flex justify-between items-center">
@@ -120,7 +120,7 @@ export default function PendingRequestsModal({
         
         <div className="flex justify-between items-center p-6 border-b border-[var(--outline)] shrink-0">
           <div className="flex flex-col gap-3">
-            <h2 className="text-2xl font-black text-[var(--title)]">Request Inbox</h2>
+            <h2 className="text-2xl font-extrabold text-[var(--title)]">Request Inbox</h2>
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('pending')}
@@ -154,7 +154,7 @@ export default function PendingRequestsModal({
             <section>
               <div className="flex items-center gap-2 mb-4 border-b border-[var(--outline)] pb-2">
                 {activeTab === 'pending' ? <Clock className="text-amber-500" size={20} /> : <XCircle className="text-red-500" size={20} />}
-                <h3 className="text-base font-black text-[var(--title)]">
+                <h3 className="text-base font-extrabold text-[var(--title)]">
                   {activeTab === 'pending' ? 'Pending Requests' : 'Declined Requests'}
                 </h3>
               </div>
