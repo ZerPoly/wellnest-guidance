@@ -2,27 +2,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, ChevronDown, Eye, EyeOff } from 'lucide-react';
-import { departments } from '@/data/data';
 
-// ── types ─────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface CounselorForm {
   firstName:   string;
   lastName:    string;
   email:       string;
   password:    string;
-  departments: string[];
+  departments: string[]; // stores department_names for display
   startTime:   string;
   endTime:     string;
 }
 
 interface Props {
-  isOpen:       boolean;
-  onClose:      () => void;
-  onSave:       (data: CounselorForm) => void;
-  initialData?: CounselorForm | null;
-  title?:       string;
-  submitText?:  string;
+  isOpen:             boolean;
+  onClose:            () => void;
+  onSave:             (data: CounselorForm) => void;
+  initialData?:       CounselorForm | null;
+  title?:             string;
+  submitText?:        string;
+  departmentOptions?: string[]; // ✅ passed from parent (from API)
+  isLoading?:         boolean;
 }
 
 const TIMES = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
@@ -37,21 +38,22 @@ const EMPTY: CounselorForm = {
   departments: [], startTime: '08:00', endTime: '17:00',
 };
 
-// Colors mapped to branding variables, original text/font properties kept
-const input = 'w-full border border-[var(--line)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] bg-[var(--card)] text-[var(--foreground)] placeholder-[var(--foreground-placeholder)]';
-const label = 'block text-sm font-semibold text-[var(--foreground-muted)] mb-1';
+const inputCls = 'w-full border border-[var(--line)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] bg-[var(--card)] text-[var(--foreground)] placeholder-[var(--foreground-placeholder)]';
+const labelCls = 'block text-sm font-semibold text-[var(--foreground-muted)] mb-1';
 
-export default function AddCounselorModal({
+export default function CounselorModal({
   isOpen, onClose, onSave,
-  initialData = null,
-  title = 'Add New Counselor',
-  submitText = 'Save Counselor',
+  initialData      = null,
+  title            = 'Add New Counselor',
+  submitText       = 'Save Counselor',
+  departmentOptions = [],
+  isLoading        = false,
 }: Props) {
 
-  const [form,      setForm]      = useState<CounselorForm>(EMPTY);
-  const [showPass,   setShowPass]  = useState(false);
-  const [deptOpen,   setDeptOpen]  = useState(false);
-  const [error,      setError]     = useState<string | null>(null);
+  const [form,     setForm]     = useState<CounselorForm>(EMPTY);
+  const [showPass, setShowPass] = useState(false);
+  const [deptOpen, setDeptOpen] = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
   const isEdit = !!initialData;
 
   useEffect(() => {
@@ -86,7 +88,7 @@ export default function AddCounselorModal({
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return 'Enter a valid email.';
     if (!isEdit && form.password.length < 8) return 'Password must be at least 8 characters.';
     if (form.departments.length === 0) return 'Select at least one department.';
-    const mins = (t: string) => { const [h,m] = t.split(':').map(Number); return h*60+m; };
+    const mins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
     if (mins(form.endTime) <= mins(form.startTime)) return 'End time must be after start time.';
     return null;
   };
@@ -96,20 +98,25 @@ export default function AddCounselorModal({
     const err = validate();
     if (err) { setError(err); return; }
     onSave(form);
-    onClose();
+    // ✅ Don't call onClose here — let the parent close after async save succeeds
   };
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full max-w-lg bg-[var(--card)] border border-[var(--line)] rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}>
-
-        {/* header */}
+      <div
+        className="relative w-full max-w-lg bg-[var(--card)] border border-[var(--line)] rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
         <div className="flex justify-between items-center px-6 pt-6 pb-4 border-b border-[var(--line)]">
           <h2 className="text-xl font-bold text-[var(--cyan)]">{title}</h2>
-          <button onClick={onClose} className="text-[var(--foreground-muted)] hover:text-[var(--foreground)] p-1 rounded-full hover:bg-[var(--background-dark)]">
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="text-[var(--foreground-muted)] hover:text-[var(--foreground)] p-1 rounded-full hover:bg-[var(--background-dark)] disabled:opacity-50"
+          >
             <X size={20} />
           </button>
         </div>
@@ -121,69 +128,107 @@ export default function AddCounselorModal({
             </div>
           )}
 
-          {/* first + last name */}
+          {/* First + last name */}
           <div className="grid grid-cols-2 gap-3">
             {(['firstName', 'lastName'] as const).map((field) => (
               <div key={field}>
-                <label className={label}>{field === 'firstName' ? 'First Name' : 'Last Name'} <span className="text-red-500">*</span></label>
+                <label className={labelCls}>
+                  {field === 'firstName' ? 'First Name' : 'Last Name'} <span className="text-red-500">*</span>
+                </label>
                 <input
                   value={form[field]}
                   onChange={(e) => set(field, e.target.value)}
                   placeholder={field === 'firstName' ? 'John' : 'Doe'}
-                  className={input}
+                  className={inputCls}
+                  disabled={isLoading}
                 />
               </div>
             ))}
           </div>
 
-          {/* email */}
+          {/* Email */}
           <div>
-            <label className={label}>Email Address <span className="text-red-500">*</span></label>
-            <input type="email" value={form.email}
+            <label className={labelCls}>Email Address <span className="text-red-500">*</span></label>
+            <input
+              type="email"
+              value={form.email}
               onChange={(e) => set('email', e.target.value)}
-              placeholder="counselor@gmail.com" className={input}
+              placeholder="counselor@gmail.com"
+              className={inputCls}
+              disabled={isLoading}
             />
           </div>
 
-          {/* password*/}
+          {/* Password (add only) */}
           {!isEdit && (
             <div>
-              <label className={label}>Password <span className="text-red-500">*</span></label>
+              <label className={labelCls}>Password <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input
                   type={showPass ? 'text' : 'password'}
                   value={form.password}
                   onChange={(e) => set('password', e.target.value)}
                   placeholder="Min. 8 characters"
-                  className={`${input} pr-10`}
+                  className={`${inputCls} pr-10`}
+                  disabled={isLoading}
                 />
-                <button type="button" onClick={() => setShowPass((p) => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] hover:text-[var(--foreground)]">
+                <button
+                  type="button"
+                  onClick={() => setShowPass((p) => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+                >
                   {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
           )}
 
-          {/* departments */}
+          {/* Departments — sourced from API via departmentOptions prop */}
           <div>
-            <label className={label}>Department <span className="text-red-500">*</span></label>
+            <label className={labelCls}>Department <span className="text-red-500">*</span></label>
             <div className="relative" onClick={(e) => e.stopPropagation()}>
-              <button type="button" onClick={() => setDeptOpen((p) => !p)}
-                className={`${input} flex items-center justify-between ${form.departments.length === 0 ? 'text-[var(--foreground-placeholder)]' : 'text-[var(--foreground)]'}`}>
-                <span className="truncate">{form.departments.length === 0 ? 'Select departments...' : form.departments.join(', ')}</span>
-                <ChevronDown size={18} className={`ml-2 flex-shrink-0 text-[var(--foreground-muted)] transition-transform ${deptOpen ? 'rotate-180' : ''}`} />
+              <button
+                type="button"
+                onClick={() => !isLoading && departmentOptions.length > 0 && setDeptOpen((p) => !p)}
+                disabled={isLoading || departmentOptions.length === 0}
+                className={`${inputCls} flex items-center justify-between disabled:opacity-50 ${
+                  form.departments.length === 0 ? 'text-[var(--foreground-placeholder)]' : 'text-[var(--foreground)]'
+                }`}
+              >
+                <span className="truncate">
+                  {departmentOptions.length === 0
+                    ? 'Loading departments...'
+                    : form.departments.length === 0
+                    ? 'Select a department...'
+                    : form.departments.join(', ')}
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`ml-2 flex-shrink-0 text-[var(--foreground-muted)] transition-transform ${deptOpen ? 'rotate-180' : ''}`}
+                />
               </button>
 
               {deptOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--card)] border border-[var(--line)] rounded-xl shadow-lg z-10 overflow-hidden">
-                  {departments.map((dept) => {
+                <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--card)] border border-[var(--line)] rounded-xl shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {departmentOptions.map((dept) => {
                     const on = form.departments.includes(dept);
                     return (
-                      <button key={dept} type="button" onClick={() => toggleDept(dept)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left ${on ? 'bg-[var(--cyan)]/10 text-[var(--cyan)] font-medium' : 'text-[var(--foreground)] hover:bg-[var(--background-dark)]'}`}>
-                        <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${on ? 'bg-[var(--cyan)] border-[var(--cyan)]' : 'border-[var(--line)]'}`}>
-                          {on && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      <button
+                        key={dept}
+                        type="button"
+                        onClick={() => toggleDept(dept)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left ${
+                          on ? 'bg-[var(--cyan)]/10 text-[var(--cyan)] font-medium' : 'text-[var(--foreground)] hover:bg-[var(--background-dark)]'
+                        }`}
+                      >
+                        <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                          on ? 'bg-[var(--cyan)] border-[var(--cyan)]' : 'border-[var(--line)]'
+                        }`}>
+                          {on && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                              <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
                         </span>
                         {dept}
                       </button>
@@ -193,27 +238,38 @@ export default function AddCounselorModal({
               )}
             </div>
 
-            {/* pills */}
+            {/* Pills */}
             {form.departments.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {form.departments.map((dept) => (
-                  <span key={dept} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--cyan)]/10 text-[var(--cyan)] rounded-full text-xs font-medium border border-[var(--cyan)]/20">
+                  <span
+                    key={dept}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--cyan)]/10 text-[var(--cyan)] rounded-full text-xs font-medium border border-[var(--cyan)]/20"
+                  >
                     {dept}
-                    <button type="button" onClick={() => toggleDept(dept)} className="hover:text-[var(--title)]"><X size={12} /></button>
+                    <button type="button" onClick={() => toggleDept(dept)} className="hover:text-[var(--title)]">
+                      <X size={12} />
+                    </button>
                   </span>
                 ))}
               </div>
             )}
           </div>
 
-          {/* start and end time */}
+          {/* Start + end time */}
           <div className="grid grid-cols-2 gap-3">
             {(['startTime', 'endTime'] as const).map((field) => (
               <div key={field}>
-                <label className={label}>{field === 'startTime' ? 'Start Time' : 'End Time'} <span className="text-red-500">*</span></label>
+                <label className={labelCls}>
+                  {field === 'startTime' ? 'Start Time' : 'End Time'} <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
-                  <select value={form[field]} onChange={(e) => set(field, e.target.value)}
-                    className={`${input} appearance-none pr-10 bg-[var(--card)]`}>
+                  <select
+                    value={form[field]}
+                    onChange={(e) => set(field, e.target.value)}
+                    disabled={isLoading}
+                    className={`${inputCls} appearance-none pr-10 bg-[var(--card)]`}
+                  >
                     {TIMES.map((t) => <option key={t} value={t}>{toAMPM(t)}</option>)}
                   </select>
                   <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--foreground-muted)]" />
@@ -222,10 +278,13 @@ export default function AddCounselorModal({
             ))}
           </div>
 
-          <button type="submit" className="w-full mt-2 py-3 rounded-xl bg-[var(--cyan)] text-white font-semibold hover:bg-[var(--cyan-dark)] transition-colors">
-            {submitText}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full mt-2 py-3 rounded-xl bg-[var(--cyan)] text-white font-semibold hover:bg-[var(--cyan-dark)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Saving...' : submitText}
           </button>
-
         </form>
       </div>
     </div>

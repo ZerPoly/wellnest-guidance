@@ -5,6 +5,42 @@ import { refreshCounselorToken } from "@/lib/api/counselorRefresh";
 import { refreshAdminToken } from "@/lib/api/adminRefresh";
 import { jwtDecode } from "jwt-decode";
 
+// ── Type augmentation ──────────────────────────────────────────────────────────
+
+declare module "next-auth" {
+  interface User {
+    role: "admin" | "counselor" | "super_admin";
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpires: number;
+    userId: string; // ✅ explicitly typed
+  }
+  interface Session {
+    user: {
+      id: string;
+      email: string;
+      role: "admin" | "counselor" | "super_admin";
+      accessToken: string;
+    };
+    adminToken?: string;
+    counselorToken?: string;
+    error?: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    role: "admin" | "counselor" | "super_admin";
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpires: number;
+    userId: string; // ✅ explicitly stored — never rely on token.sub alone
+    error?: string;
+  }
+}
+
+// ── Decoded token shape ────────────────────────────────────────────────────────
+
 interface DecodedToken {
   sub: string;
   user_id?: string;
@@ -13,13 +49,15 @@ interface DecodedToken {
   iat: number;
 }
 
+// ── Auth options ───────────────────────────────────────────────────────────────
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       id: "credentials",
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email:    { label: "Email",    type: "email"    },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
@@ -41,42 +79,53 @@ export const authOptions: NextAuthOptions = {
           const decoded = jwtDecode<DecodedToken>(result.data.access_token);
 
           const claim = decoded.role;
-          if (claim === "admin") roleFromToken = "admin";
-          else if (claim === "counselor") roleFromToken = "counselor";
+          if (claim === "admin")       roleFromToken = "admin";
+          else if (claim === "counselor")   roleFromToken = "counselor";
           else if (claim === "super_admin") roleFromToken = "super_admin";
 
+          // ✅ Prefer sub, fall back to user_id claim
           idFromToken = decoded.sub || decoded.user_id;
           tokenExpires = decoded.exp * 1000;
 
           if (!idFromToken) {
-            throw new Error("Token missing 'sub' (user_id) claim.");
+            throw new Error("Token missing 'sub' / 'user_id' claim.");
           }
+
+          // Quick UUID sanity check at login time so we catch bad tokens early
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(idFromToken)) {
+            throw new Error(`Token 'sub' is not a valid UUID: ${idFromToken}`);
+          }
+
         } catch (err) {
           console.error("Failed to decode access token:", err);
           throw new Error("Invalid access token received from server.");
         }
 
         return {
-          id: idFromToken,
-          email: credentials.email,
-          role: roleFromToken,
-          accessToken: result.data.access_token,
-          refreshToken: result.data.refresh_token,
+          id:                 idFromToken, // NextAuth puts this in token.sub
+          userId:             idFromToken, // ✅ also store explicitly
+          email:              credentials.email,
+          role:               roleFromToken,
+          accessToken:        result.data.access_token,
+          refreshToken:       result.data.refresh_token,
           accessTokenExpires: tokenExpires,
         };
       },
     }),
   ],
+
   callbacks: {
     async jwt({ token, user, account }) {
-      // 1. Initial sign-in — persist everything from authorize()
+      // 1. Initial sign-in — store everything explicitly
       if (account && user) {
         return {
           ...token,
-          accessToken: user.accessToken,
-          refreshToken: user.refreshToken,
+          userId:             user.userId,   // ✅ stored explicitly
+          accessToken:        user.accessToken,
+          refreshToken:       user.refreshToken,
           accessTokenExpires: user.accessTokenExpires,
-          role: user.role,
+          role:               user.role,
         };
       }
 
@@ -85,21 +134,27 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
-      // 3. Token expired — refresh using the correct endpoint based on role
+      // 3. Token expired — refresh using correct endpoint per role
       console.log(`Access token expired for role: ${token.role}. Refreshing...`);
 
       try {
-        if (!token.sub) {
-          throw new Error("Token is missing 'sub' (user_id).");
+        // ✅ Use token.userId (explicit) — NOT token.sub (can be undefined)
+        const userId = token.userId;
+
+        if (!userId) {
+          throw new Error("token.userId is missing — cannot refresh.");
         }
 
-        const isAdmin =
-          token.role === "admin" || token.role === "super_admin";
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(userId)) {
+          throw new Error(`token.userId is not a valid UUID: ${userId}`);
+        }
 
-        // ✅ Call the correct refresh endpoint based on role
+        const isAdmin = token.role === "admin" || token.role === "super_admin";
+
         const response = isAdmin
-          ? await refreshAdminToken(token.sub, token.refreshToken as string)
-          : await refreshCounselorToken(token.sub, token.refreshToken as string);
+          ? await refreshAdminToken(userId, token.refreshToken as string)
+          : await refreshCounselorToken(userId, token.refreshToken as string);
 
         if (!response.success || !response.data) {
           console.error("Refresh API returned failure:", response.message);
@@ -113,10 +168,12 @@ export const authOptions: NextAuthOptions = {
 
         return {
           ...token,
-          accessToken: access_token,
-          refreshToken: refresh_token,
+          accessToken:        access_token,
+          refreshToken:       refresh_token,
           accessTokenExpires: decoded.exp * 1000,
+          error:              undefined,
         };
+
       } catch (error) {
         console.error("Error refreshing access token:", error);
         return {
@@ -127,9 +184,9 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
-      session.user.id = token.sub;
-      session.user.email = token.email;
-      session.user.role = token.role;
+      session.user.id          = token.userId; // ✅ use explicit userId
+      session.user.email       = token.email as string;
+      session.user.role        = token.role;
       session.user.accessToken = token.accessToken;
 
       if (token.role === "counselor") {
@@ -145,13 +202,14 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+
   pages: {
     signIn: "/",
-    error: "/",
+    error:  "/",
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge:   30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
