@@ -132,15 +132,24 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <header className="flex flex-col mb-4">
-        <div className="flex flex-row space-x-1 text-sm">
-          <Link href="/dashboard" className="font-extrabold text-[var(--text-muted)] hover:text-[var(--title)] transition-colors">
+      <div className="flex flex-col mb-4">
+        <div className="flex flex-row space-x-1">
+          <Link 
+            href="/dashboard" 
+            className="font-extrabold text-(--text-muted) hover:text-(--title) transition-colors"
+          >
             Dashboard
           </Link>
-          <span className="text-[var(--text-muted)]">/ Users</span>
+          <span className="font-regular text-(--text-muted)">
+            / Users
+          </span>
         </div>
-        <h1 className="text-3xl font-extrabold text-[var(--title)] hidden sm:block">User Management</h1>
-      </header>
+        <div>
+          <h1 className="text-3xl font-extrabold text-(--title) hidden sm:block">
+            User Management
+          </h1>
+        </div>
+      </div>
 
       {/* Error Banner */}
       {saveError && (

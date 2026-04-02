@@ -5,10 +5,11 @@ import {
   AiOutlineSetting,
   AiOutlineTool
 } from 'react-icons/ai';
+import { FaNewspaper } from "react-icons/fa6";
 
 // Define the shape of a navigation item for type safety
 export interface NavItem {
-  name: "Dashboard" | "Calendar" | "Students" | "Settings" | "Admin Dashboard" | "Users";
+  name: "Dashboard" | "Calendar" | "Students" | "Settings" | "Admin Dashboard" | "Users" | "Promotional";
   icon: React.ElementType; // The component type for the React Icon
   roles: Array<'admin' | 'counselor' | 'super_admin'>;
   href: string; // The Next.js route path
@@ -24,5 +25,6 @@ export const NAV_ITEMS: NavItem[] = [
   // admin module
   { name: "Admin Dashboard", icon: AiOutlineDashboard, roles: ['admin', 'super_admin'], href: '/adminDashboard' },
   { name: "Users", icon: AiOutlineTeam, roles: ['admin', 'super_admin'], href: '/users' },
+  { name: "Promotional", icon: FaNewspaper, roles: ['admin', 'super_admin'], href: '/promotional' },
   // { name: "Settings", icon: AiOutlineSetting, roles: ['admin', 'counselor', 'super_admin'], href: '/settings' },
 ];

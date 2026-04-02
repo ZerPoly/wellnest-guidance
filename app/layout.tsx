@@ -1,6 +1,7 @@
 import SessionProvider from "@/lib/providers/SessionProvider";
 import ThemeProvider from '@/components/ThemeProvider';
 import "./globals.css";
+import { ToastProvider } from "@/lib/providers/ToastProvider";
 
 export const metadata = {
   title: "Portal Login",
@@ -16,9 +17,11 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <SessionProvider>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
+          <ToastProvider>
+            <ThemeProvider>
+              {children}
+            </ThemeProvider>
+          </ToastProvider>
         </SessionProvider>
       </body>
     </html>
