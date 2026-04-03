@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { AiOutlineSearch, AiOutlineFilter, AiOutlineEdit, AiOutlineDelete, AiOutlineLeft, AiOutlineRight } from 'react-icons/ai';
+import { AiOutlineSearch, AiOutlineEdit, AiOutlineDelete, AiOutlineLeft, AiOutlineRight } from 'react-icons/ai';
 import { LuLoaderCircle } from 'react-icons/lu';
 
 interface TableProps<T extends { id: string; status: string; year?: string | number }> {
@@ -13,9 +13,6 @@ interface TableProps<T extends { id: string; status: string; year?: string | num
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   searchFilter: (item: T, query: string) => boolean;
-  // enhanced filter options
-  statusFilterOptions?: { label: string; value: string }[];
-  yearFilterOptions?: { label: string; value: string }[];
   headerAction?: React.ReactNode;
   onTabChange?: (tab: string) => void;
 }
@@ -31,30 +28,13 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
   searchFilter,
   onTabChange,
   headerAction,
-  statusFilterOptions = [
-    { label: 'All Status', value: 'All' },
-    { label: 'Active', value: 'Active' },
-    { label: 'Inactive', value: 'Inactive' }
-  ],
-  yearFilterOptions = [
-    { label: 'All Years', value: 'All' },
-    { label: '1st Year',  value: 'Year First Year' },
-    { label: '2nd Year',  value: 'Year Second Year' },
-    { label: '3rd Year',  value: 'Year Third Year' },
-    { label: '4th Year',  value: 'Year Fourth Year' },
-  ],
 }: TableProps<T>) {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterOpen, setFilterOpen] = useState(false);
   
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // filter states
-  const [selectedStatus, setSelectedStatus] = useState('All');
-  const [selectedYear, setSelectedYear] = useState('All');
 
   // pagination state
   const [hasMore, setHasMore] = useState(false);
@@ -70,7 +50,7 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
       setHasMore(result.hasMore);
       setCurrentCursor(result.nextCursor);
     } catch (err: any) {
-      setError(err.message || 'Failed to load data');
+      setError(err.message || 'failed to load data');
     } finally {
       setLoading(false);
     }
@@ -81,19 +61,10 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
     loadData(activeTab, null);
   }, [activeTab, loadData]);
 
-  // combined filtering logic
+  // combined filtering logic (search only now)
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
-      const matchesSearch = searchFilter(item, searchQuery);
-      const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
-      
-      // normalize strings by trimming and removing extra internal spaces if necessary
-      const itemYear = item.year?.toString().trim();
-      const matchesYear = selectedYear === 'All' || itemYear === selectedYear;
-
-      return matchesSearch && matchesStatus && matchesYear;
-    });
-  }, [items, searchQuery, selectedStatus, selectedYear, searchFilter]);
+    return items.filter((item) => searchFilter(item, searchQuery));
+  }, [items, searchQuery, searchFilter]);
 
   const handleNextPage = () => {
     if (!currentCursor || loading) return;
@@ -135,53 +106,11 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
           <div className="relative flex-1 lg:w-64">
             <AiOutlineSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)]" />
             <input
-              placeholder="Search users..."
+              placeholder="Search users on this page..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full py-2.5 pl-10 pr-4 bg-[var(--background-dark)] border border-[var(--line)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--cyan)] outline-none text-[var(--foreground)]"
             />
-          </div>
-
-          {/* filter dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setFilterOpen(!filterOpen)}
-              className={`p-2.5 bg-[var(--background-dark)] border border-[var(--line)] rounded-xl flex items-center transition-all ${filterOpen ? 'border-[var(--cyan)] ring-2 ring-[var(--cyan)]/20' : ''}`}
-            >
-              <AiOutlineFilter size={20} className={filterOpen ? 'text-[var(--cyan)]' : 'text-[var(--foreground-muted)]'} />
-            </button>
-
-            {filterOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-[var(--card)] border border-[var(--line)] rounded-2xl shadow-2xl z-[50] overflow-hidden p-2">
-                <div className="p-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--foreground-muted)] mb-3">Status</p>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {statusFilterOptions.map(opt => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setSelectedStatus(opt.value)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${selectedStatus === opt.value ? 'bg-[var(--cyan)] border-[var(--cyan)] text-white' : 'bg-[var(--background-dark)] border-[var(--line)] text-[var(--foreground-muted)]'}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--foreground-muted)] mb-3">Year Level</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {yearFilterOptions.map(opt => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setSelectedYear(opt.value)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${selectedYear === opt.value ? 'bg-[var(--cyan)] border-[var(--cyan)] text-white' : 'bg-[var(--background-dark)] border-[var(--line)] text-[var(--foreground-muted)]'}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
           {headerAction}
         </div>
@@ -210,7 +139,7 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
                 {filteredItems.length === 0 ? (
                   <tr>
                     <td colSpan={allColumns.length} className="px-6 py-16 text-center text-[var(--foreground-muted)] text-sm italic font-medium">
-                      No results found for current filters.
+                      No results found.
                     </td>
                   </tr>
                 ) : (

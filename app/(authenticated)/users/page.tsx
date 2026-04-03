@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { AiOutlinePlus, AiOutlineUserAdd } from 'react-icons/ai';
+import { AiOutlinePlus, AiOutlineUserAdd, AiOutlineEdit, AiOutlineDelete } from 'react-icons/ai';
 import Link from 'next/link';
 
 // components
@@ -11,6 +11,7 @@ import CounselorModal, { CounselorForm } from '@/components/Users/CounselorModal
 import AdminModal, { AdminForm } from '@/components/Users/AdminModal';
 import UserDetailsModal from '@/components/Users/UserDetailsModal';
 import DeleteModal from '@/components/DeleteModal';
+import { ToastContainer, ToastType } from '@/components/Toast'; // adjust import path if needed
 
 // api & types
 import { 
@@ -22,6 +23,8 @@ import {
   createAdmin,
   updateAdmin,
   updateAdminPassword,
+  updateCounselor,
+  updateCounselorPassword,
   deleteCounselor,
   Department 
 } from '@/lib/api/admin/management';
@@ -31,10 +34,14 @@ import { formatYearLevel, mapCounselor, mapStudent, mapAdmin } from '@/lib/api/a
 export default function UsersPage() {
   const { data: session } = useSession();
   const adminToken = session?.adminToken ?? '';
+  
+  // extract current user info for authorization rules
+  const currentUserId = (session?.user as any)?.id || '';
+  const currentUserRole = session?.user?.role || '';
 
   // ui & refresh state
   const [currentTab, setCurrentTab] = useState('Students');
-  const [refreshKey, setRefreshKey] = useState(0); // forces table to re-fetch
+  const [refreshKey, setRefreshKey] = useState(0); 
   const [addCounselorOpen, setAddCounselorOpen] = useState(false);
   const [addAdminOpen, setAddAdminOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<CounselorRow | null>(null);
@@ -42,11 +49,24 @@ export default function UsersPage() {
   const [deletingUser, setDeletingUser] = useState<AppRow | null>(null);
   const [viewingUser, setViewingUser] = useState<AppRow | null>(null);
   
+  // toast state
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: ToastType; duration?: number }>>([]);
+
   // logic state
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [deptLoading, setDeptLoading] = useState(false);
+
+  // toast helpers
+  const showToast = useCallback((message: string, type: ToastType = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   // helper to trigger a data refresh
   const triggerRefresh = () => setRefreshKey(prev => prev + 1);
@@ -61,7 +81,7 @@ export default function UsersPage() {
       .finally(() => setDeptLoading(false));
   }, [adminToken]);
 
-  // table data fetcher - depends on refreshkey
+  // table data fetcher
   const fetchData = useCallback(async (tab: string, cursor?: string) => {
     if (!adminToken) throw new Error('No admin token available.');
 
@@ -101,18 +121,39 @@ export default function UsersPage() {
 
       if (!matched) throw new Error(`Department "${selectedDeptName}" not found.`);
 
-      await createCounselor(adminToken, {
-        user_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        email: formData.email,
-        password: formData.password,
-        department_id: matched.department_id,
-      });
+      if (editingUser) {
+        // update basic info
+        await updateCounselor(adminToken, editingUser.user_id, {
+          user_name: `${formData.firstName} ${formData.lastName}`.trim(),
+          email: formData.email,
+          department_id: matched.department_id,
+        });
+
+        // update password if the admin provided a new one
+        if (formData.password) {
+          await updateCounselorPassword(adminToken, editingUser.user_id, {
+            new_password: formData.password,
+          });
+        }
+        showToast("Counselor updated successfully!", "success");
+      } else {
+        // create new counselor
+        await createCounselor(adminToken, {
+          user_name: `${formData.firstName} ${formData.lastName}`.trim(),
+          email: formData.email,
+          password: formData.password || '',
+          department_id: matched.department_id,
+        });
+        showToast("Counselor added successfully!", "success");
+      }
 
       setAddCounselorOpen(false);
       setEditingUser(null);
-      triggerRefresh(); // update the table
+      triggerRefresh(); 
     } catch (err: any) {
-      setSaveError(err.message || 'Failed to save counselor.');
+      const msg = err.message || 'Failed to save counselor.';
+      setSaveError(msg);
+      showToast(msg, "error");
     } finally {
       setIsSaving(false);
     }
@@ -137,21 +178,25 @@ export default function UsersPage() {
             previous_password: formData.previousPassword,
           });
         }
+        showToast("Admin updated successfully!", "success");
       } else {
         // create new admin
         await createAdmin(adminToken, {
           user_name: `${formData.firstName} ${formData.lastName}`.trim(),
           email: formData.email,
-          password: formData.password || '', // added fallback here to fix the ts error
+          password: formData.password || '',
           is_super_admin: formData.isSuperAdmin, 
         });
+        showToast("Admin added successfully!", "success");
       }
 
       setAddAdminOpen(false);
       setEditingAdmin(null);
-      triggerRefresh(); // update the table
+      triggerRefresh(); 
     } catch (err: any) {
-      setSaveError(err.message || 'Failed to save admin.');
+      const msg = err.message || 'Failed to save admin.';
+      setSaveError(msg);
+      showToast(msg, "error");
     } finally {
       setIsSaving(false);
     }
@@ -165,9 +210,12 @@ export default function UsersPage() {
     try {
       await deleteCounselor(adminToken, deletingUser.id);
       setDeletingUser(null);
-      triggerRefresh(); // update the table
+      triggerRefresh(); 
+      showToast("User deleted successfully!", "success");
     } catch (err: any) {
-      setSaveError(err.message || 'Failed to delete user.');
+      const msg = err.message || 'Failed to delete user.';
+      setSaveError(msg);
+      showToast(msg, "error");
     } finally {
       setIsSaving(false);
     }
@@ -197,86 +245,108 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* error banner */}
-      {saveError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm font-semibold px-4 py-3 rounded-xl">
-          {saveError}
-        </div>
-      )}
-
       <TableComponent<AppRow>
-        key={refreshKey}
         tabs={['Students', 'Counselors', 'Admins']}
         columns={
           currentTab === 'Counselors'
-            ? ['ID', 'Name', 'Email', 'Department', 'Status'] 
+            ? ['ID', 'Name', 'Email', 'Department', 'Status', 'Actions']
             : currentTab === 'Admins'
-            ? ['ID', 'Name', 'Email', 'Role', 'Status'] 
+            ? ['ID', 'Name', 'Email', 'Role', 'Status', 'Actions'] 
             : ['ID', 'Name', 'Email', 'Year Level', 'Status']
         }
         fetchData={fetchData}
-        renderRow={(item) => (
-          <>
-            <td 
-              className="px-6 py-4 text-sm text-[var(--cyan)] font-mono cursor-pointer hover:underline" 
-              onClick={() => setViewingUser(item)}
-            >
-              {item.user_id.substring(0, 8)}...
-            </td>
-            <td className="px-6 py-4 text-sm text-[var(--cyan)] font-medium">{item.name}</td>
-            <td className="px-6 py-4 text-sm text-[var(--text-muted)]">{item.email}</td>
-            <td className="px-6 py-4 text-sm text-[var(--text-muted)]">
-              {'is_super_admin' in item 
-                ? (item.is_super_admin ? 'Super Admin' : 'Admin')
-                : isStudentRow(item) 
-                ? formatYearLevel((item as any).year_level) 
-                : (item as CounselorRow).department}
-            </td>
-            <td className="px-6 py-4 text-sm">
-              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
-                item.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'
-              }`}>
-                {item.status}
-              </span>
-            </td>
-          </>
-        )}
+        renderRow={(item) => {
+          // evaluate authorization for actions
+          let canEdit = false;
+          let canDelete = false;
+
+          if (currentTab === 'Counselors') {
+            canEdit = true;
+            canDelete = true;
+          } else if (currentTab === 'Admins') {
+            const adminItem = item as AdminRow;
+            if (currentUserRole === 'admin') {
+              // admin: can only edit their own info
+              canEdit = adminItem.user_id === currentUserId;
+            } else if (currentUserRole === 'super_admin') {
+              // super admin: can edit own info and non-super-admins
+              canEdit = adminItem.user_id === currentUserId || !adminItem.is_super_admin;
+            }
+          }
+
+          return (
+            <>
+              <td 
+                className="px-6 py-4 text-sm text-[var(--cyan)] font-mono cursor-pointer hover:underline" 
+                onClick={() => setViewingUser(item)}
+              >
+                {item.user_id.substring(0, 8)}...
+              </td>
+              <td className="px-6 py-4 text-sm text-[var(--text-muted)] font-semibold">{item.name}</td>
+              <td className="px-6 py-4 text-sm text-[var(--text-muted)]">{item.email}</td>
+              <td className="px-6 py-4 text-sm text-[var(--text-muted)]">
+                {'is_super_admin' in item 
+                  ? (item.is_super_admin ? 'Super Admin' : 'Admin')
+                  : isStudentRow(item) 
+                  ? formatYearLevel((item as any).year_level) 
+                  : (item as CounselorRow).department}
+              </td>
+              <td className="px-6 py-4 text-sm">
+                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
+                  item.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'
+                }`}>
+                  {item.status}
+                </span>
+              </td>
+              
+              {/* actions cell */}
+              {(currentTab === 'Counselors' || currentTab === 'Admins') && (
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <button 
+                        onClick={() => {
+                          setSaveError(null); 
+                          if (currentTab === 'Counselors') {
+                            setEditingUser(item as CounselorRow); 
+                          } else if (currentTab === 'Admins') {
+                            setEditingAdmin(item as AdminRow);
+                          }
+                        }} 
+                        className="p-2 rounded-lg text-[var(--cyan)] bg-[var(--cyan)]/10 hover:bg-[var(--cyan)]/20 transition-colors"
+                      >
+                        <AiOutlineEdit size={18} />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button 
+                        onClick={() => setDeletingUser(item)} 
+                        className="p-2 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                      >
+                        <AiOutlineDelete size={18} />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              )}
+            </>
+          );
+        }}
         searchFilter={(item, query) =>
           item.email.toLowerCase().includes(query.toLowerCase()) ||
           item.name.toLowerCase().includes(query.toLowerCase())
         }
-        onEdit={(user) => { 
-          setSaveError(null); 
-          if (currentTab === 'Counselors') {
-            setEditingUser(user as CounselorRow); 
-          } else if (currentTab === 'Admins') {
-            setEditingAdmin(user as AdminRow);
-          }
-        }}
-        onDelete={(user) => setDeletingUser(user)}
-        actionTab={currentTab === 'Students' ? undefined : currentTab} // enable actions for both counselors and admins
-        
-        statusFilterOptions={[
-          { label: 'All Status', value: 'All' },
-          { label: 'Active', value: 'Active' },
-          { label: 'Inactive', value: 'Inactive' },
-        ]}
-        yearFilterOptions={[
-          { label: 'All Years', value: 'All' },
-          { label: '1st Year', value: '1' },
-          { label: '2nd Year', value: '2' },
-          { label: '3rd Year', value: '3' },
-          { label: '4th Year', value: '4' },
-        ]}
         onTabChange={setCurrentTab}
         headerAction={
           <div className="flex gap-2">
-            <button
-              onClick={() => { setSaveError(null); setAddAdminOpen(true); }}
-              className="flex items-center gap-1 px-3 py-3 h-full rounded-lg text-xs bg-slate-800 text-white font-semibold hover:bg-slate-900 transition-all"
-            >
-              <AiOutlineUserAdd size={16} /> Add Admin
-            </button>
+            {currentUserRole === 'super_admin' && (
+              <button
+                onClick={() => { setSaveError(null); setAddAdminOpen(true); }}
+                className="flex items-center gap-1 px-3 py-3 h-full rounded-lg text-xs bg-slate-800 text-white font-semibold hover:bg-slate-900 transition-all"
+              >
+                <AiOutlineUserAdd size={16} /> Add Admin
+              </button>
+            )}
             <button
               onClick={() => { setSaveError(null); setAddCounselorOpen(true); }}
               className="flex items-center gap-1 px-3 py-3 h-full rounded-lg text-xs bg-[var(--cyan)] text-white font-semibold hover:bg-[var(--cyan-dark)] transition-all"
@@ -312,6 +382,8 @@ export default function UsersPage() {
         onSave={handleSaveAdmin}
         isLoading={isSaving}
         title={editingAdmin ? "Edit Admin" : "Add Admin"}
+        currentUserId={currentUserId}
+        targetUserId={editingAdmin?.user_id}
         initialData={editingAdmin ? {
           firstName: editingAdmin.name.split(' ')[0],
           lastName: editingAdmin.name.split(' ')[1] || '',
@@ -335,6 +407,9 @@ export default function UsersPage() {
         description='Are you sure you want to delete this user?'
         itemName={deletingUser?.email}
       />
+
+      {/* toast notifications */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }

@@ -18,6 +18,8 @@ interface Props {
   isLoading?: boolean;
   title?: string;
   initialData?: AdminForm | null;
+  currentUserId?: string;
+  targetUserId?: string;
 }
 
 const EMPTY: AdminForm = {
@@ -27,10 +29,24 @@ const EMPTY: AdminForm = {
 const inputCls = 'w-full border border-[var(--line)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] bg-[var(--card)] text-[var(--foreground)] placeholder-[var(--foreground-placeholder)]';
 const labelCls = 'block text-sm font-semibold text-[var(--foreground-muted)] mb-1';
 
-export default function AdminModal({ isOpen, onClose, onSave, isLoading = false, title, initialData }: Props) {
+export default function AdminModal({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  isLoading = false, 
+  title, 
+  initialData,
+  currentUserId,
+  targetUserId
+}: Props) {
   const [form, setForm] = useState<AdminForm>(EMPTY);
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // rules logic
+  const isEditing = !!initialData;
+  const isEditingSelf = Boolean(currentUserId && targetUserId && currentUserId === targetUserId);
+  const requiresPreviousPassword = isEditingSelf; // admin/super admin editing themselves must provide previous
 
   useEffect(() => {
     if (isOpen) {
@@ -54,24 +70,36 @@ export default function AdminModal({ isOpen, onClose, onSave, isLoading = false,
     }
 
     // if creating new, password is required
-    if (!initialData && (!form.password || form.password.length < 8)) {
+    if (!isEditing && (!form.password || form.password.length < 8)) {
       setError('Password is required and must be at least 8 characters.');
       return;
     }
 
-    // if editing and changing password, validate length
-    if (initialData && form.password && form.password.length < 8) {
-      setError('New password must be at least 8 characters.');
-      return;
+    // if editing and changing password
+    if (isEditing && form.password) {
+      if (form.password.length < 8) {
+        setError('New password must be at least 8 characters.');
+        return;
+      }
+      
+      // enforce previous password rule
+      if (requiresPreviousPassword && !form.previousPassword) {
+        setError('Previous password is required to change your password.');
+        return;
+      }
     }
 
     onSave(form);
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-[var(--card)] border border-[var(--line)] rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 h-[100dvh] w-screen">
+      <div className="absolute inset-0 w-full h-full bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      
+      <div 
+        className="relative w-full max-w-md bg-[var(--card)] border border-[var(--line)] rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto" 
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center px-6 pt-6 pb-4 border-b border-[var(--line)]">
           <h2 className="text-xl font-bold text-[var(--cyan)]">{title || 'Add New Admin'}</h2>
           <button onClick={onClose} disabled={isLoading} className="text-[var(--foreground-muted)] hover:bg-[var(--background-dark)] rounded-full p-1"><X size={20} /></button>
@@ -94,7 +122,8 @@ export default function AdminModal({ isOpen, onClose, onSave, isLoading = false,
             <input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className={inputCls} disabled={isLoading} />
           </div>
 
-          {initialData && (
+          {/* only show previous password if editing self */}
+          {isEditing && requiresPreviousPassword && (
             <div>
               <label className={labelCls}>Previous Password (if changing)</label>
               <div className="relative">
@@ -111,7 +140,7 @@ export default function AdminModal({ isOpen, onClose, onSave, isLoading = false,
           )}
 
           <div>
-            <label className={labelCls}>{initialData ? 'New Password' : 'Password'}</label>
+            <label className={labelCls}>{isEditing ? 'New Password' : 'Password'}</label>
             <div className="relative">
               <input 
                 type={showPass ? 'text' : 'password'} 
@@ -119,7 +148,7 @@ export default function AdminModal({ isOpen, onClose, onSave, isLoading = false,
                 onChange={(e) => setForm({...form, password: e.target.value})} 
                 className={inputCls} 
                 disabled={isLoading} 
-                placeholder={initialData ? 'Leave blank to keep current' : ''}
+                placeholder={isEditing ? 'Leave blank to keep current' : ''}
               />
               <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)]">
                 {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -127,12 +156,16 @@ export default function AdminModal({ isOpen, onClose, onSave, isLoading = false,
             </div>
           </div>
           
-          <div className="flex items-center gap-2 py-2">
-            <input type="checkbox" checked={form.isSuperAdmin} onChange={(e) => setForm({...form, isSuperAdmin: e.target.checked})} id="superAdmin" className="accent-[var(--cyan)]" />
-            <label htmlFor="superAdmin" className="text-sm font-bold text-[var(--title)]">Grant Super Admin Privileges</label>
-          </div>
+          {/* only show the super admin toggle when creating a brand new admin */}
+          {!isEditing && (
+            <div className="flex items-center gap-2 py-2">
+              <input type="checkbox" checked={form.isSuperAdmin} onChange={(e) => setForm({...form, isSuperAdmin: e.target.checked})} id="superAdmin" className="accent-[var(--cyan)]" />
+              <label htmlFor="superAdmin" className="text-sm font-bold text-[var(--title)]">Grant Super Admin Privileges</label>
+            </div>
+          )}
+
           <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-[var(--cyan)] text-white font-bold hover:bg-[var(--cyan-dark)] disabled:opacity-50 transition-all">
-            {isLoading ? 'Saving...' : initialData ? 'Save Changes' : 'Create Admin Account'}
+            {isLoading ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Admin Account'}
           </button>
         </form>
       </div>

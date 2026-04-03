@@ -21,14 +21,15 @@ export default function UserDetailsModal({ isOpen, onClose, data }: UserDetailsM
   ];
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+    // added h-[100dvh] w-screen to force full coverage
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 h-[100dvh] w-screen">
+      {/* backdrop: added w-full h-full */}
+      <div className="absolute inset-0 w-full h-full bg-black/40 backdrop-blur-sm" onClick={onClose} />
       
-      {/* Modal Container */}
+      {/* modal container */}
       <div className="relative w-full max-w-lg bg-[var(--card)] rounded-2xl shadow-2xl overflow-hidden border border-[var(--line)] animate-in zoom-in duration-200 max-h-[90vh] flex flex-col">
         
-        {/* Header */}
+        {/* header */}
         <div className="bg-[var(--background-dark)] p-5 border-b border-[var(--line)] flex justify-between items-center shrink-0">
           <h2 className="text-lg font-bold text-[var(--title)]">User Profile</h2>
           <button onClick={onClose} className="p-1.5 hover:bg-[var(--line)] rounded-full transition-colors text-[var(--foreground-muted)]">
@@ -36,9 +37,9 @@ export default function UserDetailsModal({ isOpen, onClose, data }: UserDetailsM
           </button>
         </div>
 
-        {/* Scrollable Content */}
+        {/* scrollable content */}
         <div className="p-5 space-y-5 overflow-y-auto custom-scrollbar">
-          {/* Details Grid */}
+          {/* details grid */}
           <div className="grid gap-3">
             {details.map((item, idx) => (
               <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--background-dark)] border border-[var(--line)]">
@@ -52,7 +53,7 @@ export default function UserDetailsModal({ isOpen, onClose, data }: UserDetailsM
           </div>
         </div>
 
-        {/* Footer */}
+        {/* footer */}
         <div className="p-5 bg-[var(--background-dark)]/50 border-t border-[var(--line)] shrink-0">
           <button 
             onClick={onClose} 

@@ -3,14 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronDown, Eye, EyeOff } from 'lucide-react';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-
+// types
 export interface CounselorForm {
   firstName:   string;
   lastName:    string;
   email:       string;
-  password:    string;
-  departments: string[]; // stores department_names for display
+  password?:   string; // made optional for edit mode
+  departments: string[]; 
   startTime:   string;
   endTime:     string;
 }
@@ -22,7 +21,7 @@ interface Props {
   initialData?:       CounselorForm | null;
   title?:             string;
   submitText?:        string;
-  departmentOptions?: string[]; // ✅ passed from parent (from API)
+  departmentOptions?: string[]; 
   isLoading?:         boolean;
 }
 
@@ -58,11 +57,15 @@ export default function CounselorModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setForm(initialData ?? { ...EMPTY });
+    if (initialData) {
+      setForm({ ...initialData, password: '' }); // always clear password when opening in edit mode
+    } else {
+      setForm({ ...EMPTY });
+    }
     setError(null);
     setShowPass(false);
     setDeptOpen(false);
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -86,7 +89,11 @@ export default function CounselorModal({
     if (!form.lastName.trim())   return 'Last name is required.';
     if (!form.email.trim())      return 'Email is required.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return 'Enter a valid email.';
-    if (!isEdit && form.password.length < 8) return 'Password must be at least 8 characters.';
+    
+    // require password on create, validate length if provided on edit
+    if (!isEdit && (!form.password || form.password.length < 8)) return 'Password must be at least 8 characters.';
+    if (isEdit && form.password && form.password.length < 8) return 'New password must be at least 8 characters.';
+    
     if (form.departments.length === 0) return 'Select at least one department.';
     const mins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
     if (mins(form.endTime) <= mins(form.startTime)) return 'End time must be after start time.';
@@ -98,18 +105,17 @@ export default function CounselorModal({
     const err = validate();
     if (err) { setError(err); return; }
     onSave(form);
-    // ✅ Don't call onClose here — let the parent close after async save succeeds
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 h-[100dvh] w-screen">
+      <div className="absolute inset-0 w-full h-full bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
       <div
         className="relative w-full max-w-lg bg-[var(--card)] border border-[var(--line)] rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* header */}
         <div className="flex justify-between items-center px-6 pt-6 pb-4 border-b border-[var(--line)]">
           <h2 className="text-xl font-bold text-[var(--cyan)]">{title}</h2>
           <button
@@ -128,7 +134,7 @@ export default function CounselorModal({
             </div>
           )}
 
-          {/* First + last name */}
+          {/* first + last name */}
           <div className="grid grid-cols-2 gap-3">
             {(['firstName', 'lastName'] as const).map((field) => (
               <div key={field}>
@@ -146,7 +152,7 @@ export default function CounselorModal({
             ))}
           </div>
 
-          {/* Email */}
+          {/* email */}
           <div>
             <label className={labelCls}>Email Address <span className="text-red-500">*</span></label>
             <input
@@ -159,31 +165,29 @@ export default function CounselorModal({
             />
           </div>
 
-          {/* Password (add only) */}
-          {!isEdit && (
-            <div>
-              <label className={labelCls}>Password <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={(e) => set('password', e.target.value)}
-                  placeholder="Min. 8 characters"
-                  className={`${inputCls} pr-10`}
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass((p) => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
-                >
-                  {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+          {/* password */}
+          <div>
+            <label className={labelCls}>{isEdit ? 'New Password' : 'Password'} {!isEdit && <span className="text-red-500">*</span>}</label>
+            <div className="relative">
+              <input
+                type={showPass ? 'text' : 'password'}
+                value={form.password || ''}
+                onChange={(e) => set('password', e.target.value)}
+                placeholder={isEdit ? 'Leave blank to keep current' : 'Min. 8 characters'}
+                className={`${inputCls} pr-10`}
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass((p) => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+              >
+                {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
-          )}
+          </div>
 
-          {/* Departments — sourced from API via departmentOptions prop */}
+          {/* departments */}
           <div>
             <label className={labelCls}>Department <span className="text-red-500">*</span></label>
             <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -238,7 +242,7 @@ export default function CounselorModal({
               )}
             </div>
 
-            {/* Pills */}
+            {/* pills */}
             {form.departments.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {form.departments.map((dept) => (
@@ -256,7 +260,7 @@ export default function CounselorModal({
             )}
           </div>
 
-          {/* Start + end time */}
+          {/* start + end time */}
           <div className="grid grid-cols-2 gap-3">
             {(['startTime', 'endTime'] as const).map((field) => (
               <div key={field}>
