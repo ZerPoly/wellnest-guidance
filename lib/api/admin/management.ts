@@ -1,9 +1,8 @@
-import { CounselorRecord, StudentRecord, PaginatedResponse } from "./management.types";
+import { CounselorRecord, StudentRecord, AdminRecord, PaginatedResponse } from "./management.types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_HW_USERS_API;
 
-// ── GET: Counselors ────────────────────────────────────────────────────────────
-
+// get: counselors 
 export async function getCounselors(
   token: string,
   limit: number = 10,
@@ -23,8 +22,7 @@ export async function getCounselors(
   return data;
 }
 
-// ── GET: Students ──────────────────────────────────────────────────────────────
-
+// get: students
 export async function getStudents(
   token: string,
   limit: number = 10,
@@ -44,8 +42,27 @@ export async function getStudents(
   return data;
 }
 
-// ── GET: Departments ───────────────────────────────────────────────────────────
+// get: admins
+export async function getAdmins(
+  token: string,
+  limit: number = 10,
+  cursor?: string
+): Promise<PaginatedResponse<AdminRecord>> {
+  const url = new URL(`${API_BASE_URL}/api/v1/users/management/admins`);
+  url.searchParams.append("limit", limit.toString());
+  if (cursor) url.searchParams.append("cursor", cursor);
 
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to fetch admins");
+  return data;
+}
+
+// get: departments
 export interface Department {
   department_id:   string;
   department_name: string;
@@ -66,12 +83,11 @@ export async function getDepartments(token: string): Promise<Department[]> {
   const data = await response.json();
   if (!response.ok) throw new Error(data.message || "Failed to fetch departments");
 
-  // Filter out soft-deleted departments
+  // filter out soft-deleted departments
   return (data.data as Department[]).filter((d) => !d.is_deleted);
 }
 
-// ── GET: Programs ──────────────────────────────────────────────────────────────
-
+// get: programs
 export interface Program {
   program_id:            string;
   program_name:          string;
@@ -113,8 +129,7 @@ export async function getProgramsByDepartment(
   return (data.data as Program[]).filter((p) => !p.is_deleted);
 }
 
-// ── POST: Create Counselor ─────────────────────────────────────────────────────
-
+// post: create counselor 
 export interface CreateCounselorPayload {
   user_name:     string;
   email:         string;
@@ -155,8 +170,7 @@ export async function createCounselor(
   return data;
 }
 
-// ── POST: Create Admin ─────────────────────────────────────────────────────────
-
+// post: create admin
 export interface CreateAdminPayload {
   user_name:      string;
   email:          string;
@@ -194,5 +208,119 @@ export async function createAdmin(
 
   const data: CreateAdminResponse = await response.json();
   if (!response.ok) throw new Error(data.message || "Failed to create admin");
+  return data;
+}
+
+// patch: update admin basic info
+export interface UpdateAdminPayload {
+  user_name?: string;
+  email?:     string;
+}
+
+export async function updateAdmin(
+  token:   string,
+  adminId: string,
+  payload: UpdateAdminPayload
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/users/management/admins/${adminId}`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to update admin");
+  return data;
+}
+
+// patch: update admin password
+export interface UpdatePasswordPayload {
+  new_password:       string;
+  previous_password?: string;
+}
+
+export async function updateAdminPassword(
+  token:   string,
+  adminId: string,
+  payload: UpdatePasswordPayload
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/users/management/admins/${adminId}/password`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to update admin password");
+  return data;
+}
+
+// patch: update counselor basic info
+export interface UpdateCounselorPayload {
+  user_name?:     string;
+  email?:         string;
+  department_id?: string;
+}
+
+export async function updateCounselor(
+  token:       string,
+  counselorId: string,
+  payload:     UpdateCounselorPayload
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/users/management/counselors/${counselorId}`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to update counselor");
+  return data;
+}
+
+// patch: update counselor password
+export async function updateCounselorPassword(
+  token:       string,
+  counselorId: string,
+  payload:     UpdatePasswordPayload
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/users/management/counselors/${counselorId}/password`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to update counselor password");
+  return data;
+}
+
+// delete: soft delete counselor
+export async function deleteCounselor(
+  token:       string,
+  counselorId: string
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/users/management/counselors/${counselorId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to delete counselor");
   return data;
 }

@@ -6,7 +6,8 @@ export interface AdminForm {
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
+  password?: string;
+  previousPassword?: string;
   isSuperAdmin: boolean;
 }
 
@@ -15,35 +16,55 @@ interface Props {
   onClose: () => void;
   onSave: (data: AdminForm) => void;
   isLoading?: boolean;
+  title?: string;
+  initialData?: AdminForm | null;
 }
 
 const EMPTY: AdminForm = {
-  firstName: '', lastName: '', email: '', password: '', isSuperAdmin: false,
+  firstName: '', lastName: '', email: '', password: '', previousPassword: '', isSuperAdmin: false,
 };
 
 const inputCls = 'w-full border border-[var(--line)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] bg-[var(--card)] text-[var(--foreground)] placeholder-[var(--foreground-placeholder)]';
 const labelCls = 'block text-sm font-semibold text-[var(--foreground-muted)] mb-1';
 
-export default function AdminModal({ isOpen, onClose, onSave, isLoading = false }: Props) {
+export default function AdminModal({ isOpen, onClose, onSave, isLoading = false, title, initialData }: Props) {
   const [form, setForm] = useState<AdminForm>(EMPTY);
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setForm(EMPTY);
+      if (initialData) {
+        // populate form but keep passwords empty for security
+        setForm({ ...initialData, password: '', previousPassword: '' });
+      } else {
+        setForm(EMPTY);
+      }
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.firstName || !form.lastName || !form.email || form.password.length < 8) {
-      setError('Please fill in all fields correctly (Password min 8 chars).');
+    if (!form.firstName || !form.lastName || !form.email) {
+      setError('Please fill in all required fields.');
       return;
     }
+
+    // if creating new, password is required
+    if (!initialData && (!form.password || form.password.length < 8)) {
+      setError('Password is required and must be at least 8 characters.');
+      return;
+    }
+
+    // if editing and changing password, validate length
+    if (initialData && form.password && form.password.length < 8) {
+      setError('New password must be at least 8 characters.');
+      return;
+    }
+
     onSave(form);
   };
 
@@ -52,7 +73,7 @@ export default function AdminModal({ isOpen, onClose, onSave, isLoading = false 
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md bg-[var(--card)] border border-[var(--line)] rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center px-6 pt-6 pb-4 border-b border-[var(--line)]">
-          <h2 className="text-xl font-bold text-[var(--cyan)]">Add New Admin</h2>
+          <h2 className="text-xl font-bold text-[var(--cyan)]">{title || 'Add New Admin'}</h2>
           <button onClick={onClose} disabled={isLoading} className="text-[var(--foreground-muted)] hover:bg-[var(--background-dark)] rounded-full p-1"><X size={20} /></button>
         </div>
 
@@ -72,21 +93,46 @@ export default function AdminModal({ isOpen, onClose, onSave, isLoading = false 
             <label className={labelCls}>Email Address</label>
             <input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className={inputCls} disabled={isLoading} />
           </div>
+
+          {initialData && (
+            <div>
+              <label className={labelCls}>Previous Password (if changing)</label>
+              <div className="relative">
+                <input 
+                  type={showPass ? 'text' : 'password'} 
+                  value={form.previousPassword || ''} 
+                  onChange={(e) => setForm({...form, previousPassword: e.target.value})} 
+                  className={inputCls} 
+                  disabled={isLoading} 
+                  placeholder="Leave blank to keep current" 
+                />
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className={labelCls}>Password</label>
+            <label className={labelCls}>{initialData ? 'New Password' : 'Password'}</label>
             <div className="relative">
-              <input type={showPass ? 'text' : 'password'} value={form.password} onChange={(e) => setForm({...form, password: e.target.value})} className={inputCls} disabled={isLoading} />
+              <input 
+                type={showPass ? 'text' : 'password'} 
+                value={form.password || ''} 
+                onChange={(e) => setForm({...form, password: e.target.value})} 
+                className={inputCls} 
+                disabled={isLoading} 
+                placeholder={initialData ? 'Leave blank to keep current' : ''}
+              />
               <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)]">
                 {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
+          
           <div className="flex items-center gap-2 py-2">
             <input type="checkbox" checked={form.isSuperAdmin} onChange={(e) => setForm({...form, isSuperAdmin: e.target.checked})} id="superAdmin" className="accent-[var(--cyan)]" />
             <label htmlFor="superAdmin" className="text-sm font-bold text-[var(--title)]">Grant Super Admin Privileges</label>
           </div>
           <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-[var(--cyan)] text-white font-bold hover:bg-[var(--cyan-dark)] disabled:opacity-50 transition-all">
-            {isLoading ? 'Creating...' : 'Create Admin Account'}
+            {isLoading ? 'Saving...' : initialData ? 'Save Changes' : 'Create Admin Account'}
           </button>
         </form>
       </div>

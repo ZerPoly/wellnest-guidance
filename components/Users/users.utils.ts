@@ -29,8 +29,18 @@ export interface StudentRow {
   year: string;          // Used for filtering
 }
 
+export interface AdminRow {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  status: string;
+  is_super_admin: boolean;
+  year?: string; // required by tablecomponent props
+}
+
 // Discriminated Union for the Table component
-export type AppRow = CounselorRow | StudentRow;
+export type AppRow = StudentRow | CounselorRow | AdminRow;
 
 /**
  * Type Guard: helps TypeScript understand if a row is a Student.

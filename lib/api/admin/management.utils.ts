@@ -1,5 +1,5 @@
-import { CounselorRow, StudentRow } from '@/components/Users/users.utils';
-import { CounselorRecord, StudentRecord } from '@/lib/api/admin/management.types';
+import { CounselorRow, StudentRow, AdminRow } from '@/components/Users/users.utils';
+import { CounselorRecord, StudentRecord, AdminRecord } from '@/lib/api/admin/management.types';
 
 export function mapCounselor(c: CounselorRecord): CounselorRow {
   return {
@@ -24,6 +24,18 @@ export function mapStudent(s: StudentRecord): StudentRow {
     status: s.is_deleted ? 'Inactive' : 'Active',
     year_level: s.year_level,
     year: s.year_level,
+  };
+}
+
+// map admin record to ui row
+export function mapAdmin(a: AdminRecord): AdminRow {
+  return {
+    id: a.user_id,
+    user_id: a.user_id,
+    name: a.user_name,
+    email: a.email,
+    status: a.is_deleted ? 'Inactive' : 'Active',
+    is_super_admin: a.is_super_admin,
   };
 }
 

@@ -13,7 +13,7 @@ interface TableProps<T extends { id: string; status: string; year?: string | num
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   searchFilter: (item: T, query: string) => boolean;
-  // Enhanced Filter Options
+  // enhanced filter options
   statusFilterOptions?: { label: string; value: string }[];
   yearFilterOptions?: { label: string; value: string }[];
   headerAction?: React.ReactNode;
@@ -52,11 +52,11 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter States
+  // filter states
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedYear, setSelectedYear] = useState('All');
 
-  // Pagination State
+  // pagination state
   const [hasMore, setHasMore] = useState(false);
   const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([]);
   const [currentCursor, setCurrentCursor] = useState<string | null>(null);
@@ -81,13 +81,13 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
     loadData(activeTab, null);
   }, [activeTab, loadData]);
 
-  // Combined Filtering Logic
+  // combined filtering logic
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       const matchesSearch = searchFilter(item, searchQuery);
       const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
       
-      // Normalize strings by trimming and removing extra internal spaces if necessary
+      // normalize strings by trimming and removing extra internal spaces if necessary
       const itemYear = item.year?.toString().trim();
       const matchesYear = selectedYear === 'All' || itemYear === selectedYear;
 
@@ -115,13 +115,13 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
 
   return (
     <div className="flex-1 border border-[var(--line)] flex flex-col h-full bg-[var(--card)] rounded-2xl shadow-md p-4">
-      {/* Header */}
+      {/* header */}
       <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4">
         <div className="flex space-x-2 p-1.5 bg-[var(--background-dark)] rounded-full border border-[var(--line)]">
           {tabs.map((tab) => (
             <button
               key={tab}
-              onClick={() => { setActiveTab(tab); setCursorHistory([]); }}
+              onClick={() => { setActiveTab(tab); setCursorHistory([]); onTabChange?.(tab); }}
               className={`px-6 py-2 text-sm font-bold rounded-full transition-all ${
                 activeTab === tab ? 'bg-[var(--title)] text-white shadow-md' : 'text-[var(--foreground-muted)] hover:text-[var(--title)]'
               }`}
@@ -142,7 +142,7 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
             />
           </div>
 
-          {/* Filter Dropdown */}
+          {/* filter dropdown */}
           <div className="relative">
             <button
               onClick={() => setFilterOpen(!filterOpen)}
@@ -187,7 +187,7 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
         </div>
       </div>
 
-      {/* Table Content */}
+      {/* table content */}
       <div className="flex-1 overflow-hidden flex flex-col">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3 text-[var(--foreground-muted)]">
@@ -238,7 +238,7 @@ function TableComponent<T extends { id: string; status: string; year?: string | 
         )}
       </div>
 
-      {/* Footer */}
+      {/* footer */}
       <div className="flex items-center justify-between mt-6 px-2">
         <p className="text-xs font-bold text-[var(--foreground-muted)]">
           Page {cursorHistory.length + 1}

@@ -21,12 +21,22 @@ export interface StudentRecord {
   year_level: string;
 }
 
+export interface AdminRecord {
+  user_id: string;
+  user_name: string;
+  email: string;
+  is_super_admin: boolean;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PaginatedResponse<T> {
   success: boolean;
   code: string;
   message: string;
   data: {
-    [key: string]: T[] | any; // Dynamic key for 'students' or 'counselors'
+    [key: string]: T[] | any; // dynamic key for 'students' or 'counselors'
     hasMore: boolean;
     nextCursor: string | null;
   };
