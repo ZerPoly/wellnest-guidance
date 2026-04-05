@@ -73,12 +73,28 @@ export const aggregateMoodData = (moods: MoodCheckIn[]) => {
 // ============================================
 
 export const getStatusClasses = (status: string, isFlagged: boolean) => {
-  if (isFlagged || status === "Struggling" || status === "InCrisis") {
-    return "text-red-600 bg-red-50 border-red-300";
+  // Priority: Crisis or Flagged (Red)
+  if (isFlagged || status === "InCrisis") {
+    return "text-[var(--classification-red)] bg-[var(--classification-red)]/10 border-[var(--classification-red)]/20";
   }
-  if (status === "Excelling" || status === "Thriving") {
-    return "text-green-600 bg-green-50 border-green-300";
+  
+  // Warning: Struggling (Blue)
+  if (status === "Struggling") {
+    return "text-[var(--classification-blue)] bg-[var(--classification-blue)]/10 border-[var(--classification-blue)]/20";
+    
   }
-  return "text-gray-600 bg-gray-50 border-gray-300";
+
+  // Success: Excelling (Yellow)
+  if (status === "Thriving") {
+    return "text-[var(--classification-yellow)] bg-[var(--classification-yellow)]/10 border-[var(--classification-yellow)]/20";
+  }
+
+  // Success: Excelling (Green)
+  if (status === "Excelling") {
+    return "text-[var(--classification-green)] bg-[var(--classification-green)]/10 border-[var(--classification-green)]/20";
+  }
+
+  // Default / Neutral
+  return "text-[var(--foreground-muted)] bg-[var(--background-dark)] border-[var(--line)]";
 };
 

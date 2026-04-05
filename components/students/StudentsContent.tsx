@@ -199,7 +199,7 @@ const StudentsContent: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Search bar */}
-      <div className="flex gap-4">
+      {/* <div className="flex gap-4">
         <input
           type="text"
           placeholder="Search by email or department..."
@@ -207,7 +207,7 @@ const StudentsContent: React.FC = () => {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 px-6 py-3 bg-[var(--card-dark)] border border-[var(--line)] rounded-2xl text-[var(--foreground)] placeholder-[var(--foreground-placeholder)] focus:ring-2 focus:ring-[var(--cyan)] outline-none transition-all"
         />
-      </div>
+      </div> */}
 
       {/* Filter controls */}
       <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4">
@@ -239,7 +239,7 @@ const StudentsContent: React.FC = () => {
                       key={option}
                       onClick={() => { setStatusFilter(option); setShowFilter(false); }}
                       className={`flex items-center justify-between w-full px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors ${
-                        isActive ? "bg-[var(--primary)] text-white" : "text-[var(--foreground-muted)] hover:bg-[var(--background)]"
+                        isActive ? "bg-[var(--button)] text-white" : "text-[var(--foreground-muted)] hover:bg-[var(--background)]"
                       }`}
                     >
                       {option === "InCrisis" ? "In-Crisis" : option}
