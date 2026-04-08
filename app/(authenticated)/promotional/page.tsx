@@ -171,7 +171,12 @@ const PromotionalManagement = () => {
                 <p className="text-[var(--foreground-muted)] text-xs mb-6 line-clamp-3">{promo.headline}</p>
 
                 <div className="mt-auto pt-4 border-t border-[var(--line)]">
-                  <Link href={`/articles/${promo.content_id}`} className="text-xs font-bold text-[var(--cyan)] hover:underline">
+                  <Link 
+                    href={`${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://heron-wellnest.vercel.app'}/articles/${promo.content_id}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-[var(--cyan)] hover:underline"
+                  >
                     View Public Page
                   </Link>
                 </div>
