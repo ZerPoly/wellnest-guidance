@@ -7,13 +7,16 @@ import { useSession } from 'next-auth/react';
 import { useToastContext } from '@/lib/providers/ToastProvider';
 import { HiOutlineChevronLeft, HiOutlineCloudUpload, HiX } from 'react-icons/hi';
 
+// Import the new API function
+import { createPromotionalContent } from '@/lib/api/admin/promotional';
+
 // Validation Constants
 const MIN_TITLE_LENGTH = 5;
 const MAX_TITLE_LENGTH = 100;
 const MAX_SUMMARY_LENGTH = 250;
 
 const PromotionalCreate = () => {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
   const { error: showErrorToast, success: showSuccessToast } = useToastContext();
 
@@ -28,12 +31,6 @@ const PromotionalCreate = () => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isSubmittingRef = useRef(false);
-  const dataRef = useRef({ title, summary, mainBody });
-
-  useEffect(() => {
-    dataRef.current = { title, summary, mainBody };
-  }, [title, summary, mainBody]);
 
   // --- 1. Recovery Logic ---
   useEffect(() => {
@@ -81,37 +78,44 @@ const PromotionalCreate = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Auth Check
+    const token = (session as any)?.adminToken;
+    if (!token) {
+      showErrorToast("Authentication error. Please log in again as an admin.");
+      return;
+    }
+
     if (title.length < MIN_TITLE_LENGTH) {
       showErrorToast(`Title must be at least ${MIN_TITLE_LENGTH} characters.`);
       return;
     }
-    if (!imageFile) {
-      showErrorToast("Please upload a headliner image.");
-      return;
-    }
 
     setIsSubmitting(true);
-    isSubmittingRef.current = true;
 
     try {
-      // Logic for FormData upload (for images)
+      // Build the form data mapping UI states to API requirements
       const formData = new FormData();
       formData.append('title', title);
-      formData.append('summary', summary);
-      formData.append('body', mainBody);
-      formData.append('image', imageFile);
+      formData.append('headline', summary); // UI 'summary' is the API 'headline'
+      formData.append('summary', mainBody); // UI 'mainBody' is the API 'summary'
+      
+      // The API marks image as optional, but if you want to require it, keep this check
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
 
-      // Replace with your actual API call: await uploadPromotion(formData, token)
-      console.log("Submitting FormData...");
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Execute actual API call
+      await createPromotionalContent(token, formData);
 
+      // Clear drafts on success
       ['title', 'sum', 'body'].forEach(key => localStorage.removeItem(`promo_draft_${key}`));
+      
       showSuccessToast("Promotion published successfully!");
-      router.push('/dashboard/promotional');
-    } catch (error) {
+      router.push('/promotional'); // Adjusted to point to admin route if applicable
+    } catch (error: any) {
+      showErrorToast(error.message || "Failed to publish promotion.");
+    } finally {
       setIsSubmitting(false);
-      isSubmittingRef.current = false;
-      showErrorToast("Failed to publish promotion.");
     }
   };
 
@@ -148,7 +152,7 @@ const PromotionalCreate = () => {
 
         {/* Image Upload Section */}
         <div className="space-y-3">
-          <label className="text-sm font-bold text-[var(--foreground-muted)] ml-1">Headliner Image</label>
+          <label className="text-sm font-bold text-[var(--foreground-muted)] ml-1">Headliner Image (Optional)</label>
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -183,7 +187,7 @@ const PromotionalCreate = () => {
 
         {/* Quick Summary Section */}
         <div className="space-y-2">
-          <label className="text-sm font-bold text-[var(--foreground-muted)] ml-1">Quick Summary</label>
+          <label className="text-sm font-bold text-[var(--foreground-muted)] ml-1">Quick Summary (Headline)</label>
           <textarea
             placeholder="A short hook to catch the student's attention..."
             value={summary}
