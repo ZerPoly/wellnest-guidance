@@ -252,7 +252,7 @@ export default function CounselorAgendaModal({
           <div>
             <label className="block text-[var(--foreground)] mb-1 font-bold text-sm md:text-base">Session Type</label>
             <div className="grid grid-cols-2 gap-3">
-              {['counseling', 'routine_interview'].map((t) => (
+              {['counseling', 'routine_interview',].map((t) => (
                 <button key={t} type="button" onClick={() => setFormData(p => ({ ...p, type: t as any }))}
                   className={`py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all ${formData.type === t ? "bg-[var(--button)] text-white shadow-md" : "bg-[var(--card-dark)] text-[var(--foreground-muted)] border border-[var(--border)]"}`}>
                   {t.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
